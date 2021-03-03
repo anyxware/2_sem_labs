@@ -1,10 +1,6 @@
-//cc -o lab2  main.c stack.c -D VECT_IMP -D STACK_TYPE=STACK_VECT
-//cc -o lab2  main.c stack.c -D LIST_IMP -D STACK_TYPE=STACK_LIST
-//#define LIST_IMP
-//#define STACK_TYPE STACK_LIST
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include "stack.h"
 #include "list.h"
 #include "vector.h"
@@ -55,6 +51,8 @@ void stack_clear(STACK* Stack){
 	free(Stack->conteiner);
 }
 
+
+//------------------------------------------
 /*
 
 int main(int argc, char const *argv[])

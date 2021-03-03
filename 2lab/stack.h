@@ -13,27 +13,3 @@ void* stack_pop(STACK* Stack);
 void stack_clear(STACK* Stack);
 
 #endif //LAB2_H
-
-
-
-
-
-
-
-
-
-/*
-typedef struct{
-	char data[STACK_SIZE];
-	int top;
-}STACK_VECT;
-
-typedef struct ITEM{
-	char data;
-	struct ITEM* next;
-}ITEM;
-
-typedef struct{
-	ITEM* top;
-}STACK_LIST;
-*/

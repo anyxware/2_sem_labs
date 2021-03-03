@@ -15,10 +15,11 @@ typedef struct{
 void list_init(LIST* List);
 int list_append(LIST* List, void* data, size_t data_size);
 void* list_pop(LIST* List, int i);
-void list_extend(LIST* List, LIST* List1);
 int list_insert(LIST *List, void* data, int i, size_t data_size);
 void list_remove(LIST* List, void* data, size_t data_size);
 void list_clear(LIST* list);
+void list_extend(LIST* List, LIST* List1);
+void list_print(LIST* List);
 
 #endif //LIST_H
 

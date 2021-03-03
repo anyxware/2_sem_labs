@@ -57,79 +57,95 @@ int comprasion(char token, char element){
 	}
 }
 
-int check_token(char* infix, int i){
-	/*
-	if(infix[i+1] == '(' && infix[i] != '*' && infix[i] != '/' && infix[i] != '+' && infix[i] != '-') return 1; // (+
-	if(infix[i] == ')' && infix[i+1] != '*' && infix[i+1] != '/' && infix[i+1] != '+' && infix[i+1] != '-' && infix[i+1] != 0) return 2; // +) 
-	if(infix[i] == '(' && (infix[i+1] < 'A' || infix[i+1] > 'Z' || infix[i+1] < 'a' || infix[i+1] > 'z' || infix[i+1] == ')' || infix[i+1] == '(') && infix[i+1] != 0) return 3; // a(
-	if(infix[i+1] == ')' && (infix[i] < 'A' || infix[i] > 'Z' || infix[i] < 'a' || infix[i] > 'z' || infix[i] == ')' || infix[i] == '(')) return 4; // )a
-	if((infix[i] >= 'A' && infix[i] <= 'Z' || infix[i] >= 'a' && infix[i] <= 'z') && (infix[i+1] >= 'A' && infix[i+1] <= 'Z' || infix[i+1] >= 'a' && infix[i+1] <= 'z')) return 5; // aa
-	*/
-	return 0;
+int symbol(char token){
+	return token >= 'A' && token <= 'Z' || token >= 'a' && token <= 'z';
 }
 
+int operand(char token){
+	return token == '*' || token == '/' || token == '+' || token == '-';
+}
+
+int check_token(char* infix, int i){
+	if(i == 0 && operand(infix[i])) return 1;
+	if(symbol(infix[i]) && infix[i+1] == '(') return 1; // a(
+	if(infix[i] == ')' && symbol(infix[i+1])) return 1; // )a
+	if(infix[i] == '(' && operand(infix[i+1])) return 1; // (+
+	if(operand(infix[i]) && infix[i+1] == ')') return 1; // +)
+	if(symbol(infix[i]) && symbol(infix[i+1])) return 1; // aa
+	if(operand(infix[i]) && operand(infix[i+1])) return 1; // ++
+	return 0;
+}
 
 int infix_to_postfix(char* infix, char* postfix){
 	STACK Stack;
 	stack_init(&Stack, strlen(infix), sizeof(char));
 	int j = 0;
-	int bracket_flag = 0;
+	int bracket_flag = 0, err_flag = 0, push_flag = 1;
 	char token, element;
 	void* status;
-	int y = 0;
 	for(int i = 0; i < strlen(infix); i++){
 		token = infix[i];
-		if(check_token(infix, i)){
-			printf("\033[1;31mWrong entry!\033[0m\n");
-			printf("%d\n",check_token(infix,i) );
-			return 0;
+		if(check_token(infix, i)) {
+			err_flag = 1;
+			break;
 		}
-
-		if(token >= 'A' && token <= 'Z' || token >= 'a' && token <= 'z'){
+		if(symbol(token)){
 			postfix[j++] = token;
 		}
 		else if(token == '('){
-			stack_push(&Stack, (void*)&token);//uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
+			push_flag = stack_push(&Stack, (void*)&token);
 			bracket_flag = 1;
 		}
 		else if(token == ')' && bracket_flag){
 			do{
-				status = stack_pop(&Stack);//ooooooooooooooooooooooooooooooooooooooooooo
+				status = stack_pop(&Stack);
 				element = status ? *((char*)status) : 0;
-				free(status);//------
+				free(status);
 				if(element != '(') postfix[j++] = element;
 			}while(element != '(');
 			bracket_flag = 0;
 		}
-		else if(token == '*' || token == '/' || token == '+' || token == '-'){
+		else if(operand(token)){
 			do{
-				status = stack_pop(&Stack);//ooooooooooooooooooooooooooooooooooo
+				status = stack_pop(&Stack);
 				element = status ? *((char*)status) : 0;
-				free(status);//------
+				free(status);
 				if(comprasion(token, element)){
 					postfix[j++] = element;
 				}
 				else{
-					stack_push(&Stack, (void*)&element);//uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
+					push_flag = stack_push(&Stack, (void*)&element);
 					break;
 				}
 			}while(1);
-			stack_push(&Stack, (void*)&token);//uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
+			push_flag = stack_push(&Stack, (void*)&token);
 		}
 		else{
-			printf("-----\n");
+			err_flag = 2;
+			break;
 		}
 	}
 	do{
-		status = stack_pop(&Stack);//oooooooooooooooooooooooooooooooooooo
+		status = stack_pop(&Stack);
 		element = status ? *((char*)status) : 0;
-		free(status);//----
-		if(element){
-			postfix[j++] = element;
-		}
-		else
-			break;
+		free(status);
+		if(element) postfix[j++] = element;
+		else break;
 	}while(1);
 	stack_clear(&Stack);
+	if(bracket_flag) err_flag = 1;
+	if(!push_flag) err_flag = 3;
+	switch(err_flag){
+		case 1:
+		printf("\033[1;31mWrong entry!\033[0m");
+		break;
+		case 2:
+		printf("\033[1;31mWrong symbols!\033[0m");
+		break;
+		case 3:
+		printf("\033[1;31mStackoverflow!\033[0m");
+		break;
+	}
+	if(err_flag) return 0;
 	return j;
 }

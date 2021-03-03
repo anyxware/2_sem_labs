@@ -14,6 +14,6 @@ void* vector_pop(VECTOR* Vector, int i);
 int vector_insert(VECTOR* Vector, void* x, int i);
 void vector_remove(VECTOR* Vector, void* x);
 void vector_clear(VECTOR* Vector);
-//void vector_print(VECTOR* Vector);
+void vector_print(VECTOR* Vector);
 
 #endif //VECT_H
