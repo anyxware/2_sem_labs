@@ -1,3 +1,4 @@
+#include <string.h>  
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,25 +60,24 @@ int comprasion(char token, char element){
 int check_token(char* infix, int i){
 	/*
 	if(infix[i+1] == '(' && infix[i] != '*' && infix[i] != '/' && infix[i] != '+' && infix[i] != '-') return 1; // (+
-
 	if(infix[i] == ')' && infix[i+1] != '*' && infix[i+1] != '/' && infix[i+1] != '+' && infix[i+1] != '-' && infix[i+1] != 0) return 2; // +) 
-
 	if(infix[i] == '(' && (infix[i+1] < 'A' || infix[i+1] > 'Z' || infix[i+1] < 'a' || infix[i+1] > 'z' || infix[i+1] == ')' || infix[i+1] == '(') && infix[i+1] != 0) return 3; // a(
-
 	if(infix[i+1] == ')' && (infix[i] < 'A' || infix[i] > 'Z' || infix[i] < 'a' || infix[i] > 'z' || infix[i] == ')' || infix[i] == '(')) return 4; // )a
-
 	if((infix[i] >= 'A' && infix[i] <= 'Z' || infix[i] >= 'a' && infix[i] <= 'z') && (infix[i+1] >= 'A' && infix[i+1] <= 'Z' || infix[i+1] >= 'a' && infix[i+1] <= 'z')) return 5; // aa
 	*/
 	return 0;
 }
 
+
 int infix_to_postfix(char* infix, char* postfix){
-	STACK stack;
-	stack_init(&stack, strlen(infix));
-	int i = 0, j = 0;
+	STACK Stack;
+	stack_init(&Stack, strlen(infix), sizeof(char));
+	int j = 0;
 	int bracket_flag = 0;
 	char token, element;
-	for(i; i < strlen(infix); i++){
+	void* status;
+	int y = 0;
+	for(int i = 0; i < strlen(infix); i++){
 		token = infix[i];
 		if(check_token(infix, i)){
 			printf("\033[1;31mWrong entry!\033[0m\n");
@@ -85,47 +85,51 @@ int infix_to_postfix(char* infix, char* postfix){
 			return 0;
 		}
 
-		if(token >= 'A' && token <= 'Z' || token >= 'a' && token <= 'z')
+		if(token >= 'A' && token <= 'Z' || token >= 'a' && token <= 'z'){
 			postfix[j++] = token;
-
+		}
 		else if(token == '('){
-			if(!(stack_push(&stack, token))) return 0;
+			stack_push(&Stack, (void*)&token);//uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
 			bracket_flag = 1;
-
-		}else if(token == ')' && bracket_flag){
+		}
+		else if(token == ')' && bracket_flag){
 			do{
-				element = stack_pop(&stack);
+				status = stack_pop(&Stack);//ooooooooooooooooooooooooooooooooooooooooooo
+				element = status ? *((char*)status) : 0;
+				free(status);//------
 				if(element != '(') postfix[j++] = element;
 			}while(element != '(');
 			bracket_flag = 0;
-
-		}else if(token == '*' || token == '/' || token == '+' || token == '-'){
+		}
+		else if(token == '*' || token == '/' || token == '+' || token == '-'){
 			do{
-				element = stack_pop(&stack);
-				if(element){
-					if(comprasion(token, element)){
-						postfix[j++] = element;
-					}else{
-						stack_push(&stack, element);
-						break;
-					}
-				}else
+				status = stack_pop(&Stack);//ooooooooooooooooooooooooooooooooooo
+				element = status ? *((char*)status) : 0;
+				free(status);//------
+				if(comprasion(token, element)){
+					postfix[j++] = element;
+				}
+				else{
+					stack_push(&Stack, (void*)&element);//uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
 					break;
+				}
 			}while(1);
-			if(!(stack_push(&stack, token))) return 0;
-
-		}else{
-			printf("\033[1;31mBad symbols!\033[0m\n");
-			return 0;
+			stack_push(&Stack, (void*)&token);//uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
+		}
+		else{
+			printf("-----\n");
 		}
 	}
 	do{
-		element = stack_pop(&stack);
-		if(element)
+		status = stack_pop(&Stack);//oooooooooooooooooooooooooooooooooooo
+		element = status ? *((char*)status) : 0;
+		free(status);//----
+		if(element){
 			postfix[j++] = element;
+		}
 		else
 			break;
 	}while(1);
-	stack_clear(&stack);
+	stack_clear(&Stack);
 	return j;
 }

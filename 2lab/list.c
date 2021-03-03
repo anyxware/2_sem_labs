@@ -1,24 +1,26 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "list.h"
 
 void list_init(LIST* List){
-    //List = (LIST*)calloc(1, sizeof(LIST));
     List->head = NULL;
     List->tail = NULL;
 }
 
-int list_append(LIST* List, char x){
+int list_append(LIST* List, void* data, size_t data_size){
     ITEM* ptr = (ITEM*)malloc(sizeof(ITEM));
     if(!ptr) return 0;
-    ptr->data = x;
+    ptr->data = malloc(data_size);
+    if(!ptr->data) return 0;
+    memcpy(ptr->data, data, data_size);
     ptr->next = NULL;
     if(!List->head){
         List->head = ptr;
-        List->tail = ptr;
+        List->tail = ptr; 
     }else{
-        List->tail->next = ptr;
-        List->tail = ptr;
+        List->tail->next = ptr; 
+        List->tail = ptr; 
     }
     return 1;
 }
@@ -33,31 +35,23 @@ void list_extend(LIST* List, LIST* List1){
     }
 }
 
-void list_remove(LIST* List, char x) {
+void list_remove(LIST* List, void* data, size_t data_size) {
     ITEM* ptr = List->head, *ptr_prev = NULL;
-    while (ptr && ptr->data != x) {
+    while (ptr && memcmp(ptr->data, data, data_size)) {
         ptr_prev = ptr;
         ptr = ptr->next;
     }
-    if (!ptr) {
-        return;
-    }
-    if (ptr == List->head) {
-        List->head = ptr->next;
-    }
-    if (ptr == List->tail) {
-        List->tail = ptr_prev;
-    }
-    if (ptr_prev) {
-        ptr_prev->next = ptr->next;
-    }
+    if (!ptr) return;
+    if (ptr == List->head) List->head = ptr->next;
+    if (ptr == List->tail) List->tail = ptr_prev;
+    if (ptr_prev) ptr_prev->next = ptr->next;
     free(ptr);
 }
 
-char list_pop(LIST* List, int i){
+void* list_pop(LIST* List, int i){
     ITEM* ptr = List->head, *ptr_prev = NULL;
     int j = 0;
-    char c;
+    void* c;
     if(i == -1){
         while (ptr && ptr->next) {
             ptr_prev = ptr;
@@ -69,24 +63,16 @@ char list_pop(LIST* List, int i){
             ptr = ptr->next;
         }
     }
-    if (!ptr) {
-        return 0;
-    }
-    if (ptr == List->head) {
-        List->head = ptr->next;
-    }
-    if (ptr == List->tail) {
-        List->tail = ptr_prev;
-    }
-    if (ptr_prev) {
-        ptr_prev->next = ptr->next;
-    }
-    c =  ptr->data;
+    if (!ptr) return NULL;
+    if (ptr == List->head) List->head = ptr->next;
+    if (ptr == List->tail) List->tail = ptr_prev;
+    if (ptr_prev) ptr_prev->next = ptr->next;
+    c = ptr->data;
     free(ptr);
     return c;
 }
 
-int list_insert(LIST *List, char x, int i) {
+int list_insert(LIST *List, void* data, int i, size_t data_size) {
     ITEM* ptr = List->head, *ptr_prev = NULL;
     int j = 0;
     while (ptr && j++ < i) {
@@ -97,7 +83,8 @@ int list_insert(LIST *List, char x, int i) {
     if (!new) {
         return -1;
     }
-    new->data = x;
+    new->data = malloc(data_size);
+    memcpy(new->data, data, data_size);
     new->next = ptr;
     if (ptr_prev) {
         ptr_prev->next = new;
@@ -110,6 +97,19 @@ int list_insert(LIST *List, char x, int i) {
     return 0;
 }
 
+void list_clear(LIST* List) {
+    ITEM* ptr = List->head, *ptr_prev;
+    while (ptr) {
+        ptr_prev = ptr;
+        ptr = ptr->next;
+        free(ptr_prev->data);
+        free(ptr_prev);
+    }
+}
+
+
+
+/*
 void list_print(LIST* List){
     ITEM* ptr = List->head;
     while(ptr){
@@ -117,17 +117,23 @@ void list_print(LIST* List){
         ptr = ptr->next;
     }
     printf("\n");
-}
+}*/
 
-void list_clear(LIST* List) {
-    ITEM* ptr = List->head, *ptr_prev;
-    while (ptr) {
-        ptr_prev = ptr;
-        ptr = ptr->next;
-        free(ptr_prev);
+/*
+int list_append(LIST* List, char x){
+    ITEM* ptr = (ITEM*)malloc(sizeof(ITEM));
+    if(!ptr) return 0;
+    ptr->data = x;
+    ptr->next = NULL;
+    if(!List->head){
+        List->head = ptr;
+        List->tail = ptr;
+    }else{
+        List->tail->next = ptr;
+        List->tail = ptr;
     }
-    //free(List);
-}
+    return 1;
+}*/
 
 /*
 int main(int argc, char const *argv[])
@@ -135,11 +141,18 @@ int main(int argc, char const *argv[])
     LIST List, List1;
     list_init(&List);
     list_init(&List1);
+    char c;
     char s[] = "qwertyuiopasdfghjklzxcvbnm";
     for(int i = 0; i < 26; i++){
-        list_append(&List, s[i]);
-        list_append(&List1, s[i]);
+        list_append(&List, (void*)&s[i], sizeof(s[i]));
+        list_append(&List1, (void*)&s[i], sizeof(s[i]));
     }
+    c = 'b';
+    list_remove(&List, (void*)&c, sizeof(c));
+    for(int i = 0; i < 25; i++){
+        printf("%c\n", *((char*)list_pop(&List, 0)));
+    }
+    /*
     list_extend(&List, &List1);
     list_print(&List);
     list_remove(&List, 'r');
@@ -154,8 +167,8 @@ int main(int argc, char const *argv[])
     list_print(&List);
     return 0;
 }
-*/
 
+*/
 
 /*
 List *list_new() {
