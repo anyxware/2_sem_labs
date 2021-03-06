@@ -43,7 +43,7 @@ void clean(char* infix, char* postfix){
 	free(postfix);
 }
 
-int comprasion(char token, char element){
+int oprndcmp(char token, char element){
 	if(token == '+' || token == '-'){
 		if(element == '+' || element == '-' || element == '*' || element == '/')
 			return 1;
@@ -65,27 +65,28 @@ int operand(char token){
 	return token == '*' || token == '/' || token == '+' || token == '-';
 }
 
-int check_token(char* infix, int i){
-	if(i == 0 && operand(infix[i])) return 1;
-	if(symbol(infix[i]) && infix[i+1] == '(') return 1; // a(
-	if(infix[i] == ')' && symbol(infix[i+1])) return 1; // )a
-	if(infix[i] == '(' && operand(infix[i+1])) return 1; // (+
-	if(operand(infix[i]) && infix[i+1] == ')') return 1; // +)
-	if(symbol(infix[i]) && symbol(infix[i+1])) return 1; // aa
-	if(operand(infix[i]) && operand(infix[i+1])) return 1; // ++
+int check_token(char* infix, char* p){
+	if(p == infix && operand(*p)) return 1;
+	if(symbol(*p) && *(p+1) == '(') return 1; // a(
+	if(*p == ')' && symbol(*(p+1))) return 1; // )a
+	if(*p == '(' && operand(*(p+1))) return 1; // (+
+	if(operand(*p) && *(p+1) == ')') return 1; // +)
+	if(symbol(*p) && symbol(*(p+1))) return 1; // aa
+	if(operand(*p) && operand(*(p+1))) return 1; // ++
 	return 0;
 }
 
 int infix_to_postfix(char* infix, char* postfix){
 	STACK Stack;
-	stack_init(&Stack, strlen(infix), sizeof(char));
+	stack_init(&Stack, 4, sizeof(char));
 	int j = 0;
 	int bracket_flag = 0, err_flag = 0, push_flag = 1;
 	char token, element;
 	void* status;
-	for(int i = 0; i < strlen(infix); i++){
-		token = infix[i];
-		if(check_token(infix, i)) {
+	//int len = strlen()
+	for(char* p = infix; *p != '\0'; p++){
+		token = *p;
+		if(check_token(infix, p)) {
 			err_flag = 1;
 			break;
 		}
@@ -110,7 +111,7 @@ int infix_to_postfix(char* infix, char* postfix){
 				status = stack_pop(&Stack);
 				element = status ? *((char*)status) : 0;
 				free(status);
-				if(comprasion(token, element)){
+				if(oprndcmp(token, element)){
 					postfix[j++] = element;
 				}
 				else{

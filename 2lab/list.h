@@ -2,7 +2,6 @@
 #define LIST_H
 
 typedef struct ITEM{
-    //char data;
     void* data;
     struct ITEM *next;
 }ITEM;
