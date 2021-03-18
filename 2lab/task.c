@@ -83,7 +83,6 @@ int infix_to_postfix(char* infix, char* postfix){
 	int bracket_flag = 0, err_flag = 0, push_flag = 1;
 	char token, element;
 	void* status;
-	//int len = strlen()
 	for(char* p = infix; *p != '\0'; p++){
 		token = *p;
 		if(check_token(infix, p)) {

@@ -48,6 +48,8 @@ matr read_matr(){
 	return M;
 }
 
+//while(status = scanf("%[^\n]d"), &x) && status != -1)
+
 matr new_matr(matr M){
 	matr newM;
 	newM.m = M.m;
