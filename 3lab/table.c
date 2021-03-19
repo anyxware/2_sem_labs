@@ -384,7 +384,7 @@ int main(int argc, char const *argv[])
 	}
 	KS2_2_delete_table(table, 7);
 
-	const Info* inf2 = search_release_table(table, "x", 0);
+	const Info* inf3 = search_release_table(table, "x", 0);
 	if(inf3){
 		printf("%d %d %s\n", inf3->x, inf3->y, inf3->string);
 	}
