@@ -153,6 +153,8 @@ int insert_table(Table* table,const char* key1, int key2, Info info){
 	table->csize++;
 }
 
+//-----------------------------TWO KEYS---------------------------------------------------------
+
 const Info* search1_table(Table* table, char* key1, int key2, int del){ //bin search  and delete
 	if(!table->csize) return NULL;
 	int left = 0, right = table->csize - 1;
@@ -228,7 +230,9 @@ const Info* search2_table(Table* table, char* key1, int key2, int del){ //hash_s
 	return NULL;
 }
 
-Info* search_elements1_table(Table* table, char* key1, int del){ //return massiv with structures and null-term structure
+//-----------------------------ONE KEY---------------------------------------------------------
+
+InfoR* search_elements1_table(Table* table, char* key1, int del){ //return massive with structures and null-term structure
 	if(!table->csize) return NULL;
 	int left = 0, right = table->csize - 1;
 	int ind1, ind2, ind0, status = 1;
@@ -262,13 +266,14 @@ Info* search_elements1_table(Table* table, char* key1, int del){ //return massiv
 			count+=1;
 		}
 		ind1 = ind0;
-		Info* information = (Info*)malloc((count + 1) * sizeof(Info));
+		InfoR* information = (InfoR*)malloc((count + 1) * sizeof(InfoR));
 		for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
-			memcpy(&(information[ind1 - ind0]), &(table->ks1[ind1].item->info), sizeof(Info));
-			information[ind1 - ind0].string = (char*)malloc(strlen(table->ks1[ind1].item->info.string));
-			strcpy(information[ind1 - ind0].string, table->ks1[ind1].item->info.string);
+			memcpy(&(information[ind1 - ind0].info), &(table->ks1[ind1].item->info), sizeof(Info));
+			information[ind1 - ind0].info.string = (char*)malloc(strlen(table->ks1[ind1].item->info.string));
+			strcpy(information[ind1 - ind0].info.string, table->ks1[ind1].item->info.string);
+			information[ind1 - ind0].release = table->ks1[ind1].release;
 		}
-		information[ind1 - ind0].string = NULL;
+		information[ind1 - ind0].info.string = NULL;
 		return information;
 	}
 	return NULL;
@@ -307,6 +312,12 @@ Info* search_elements2_table(Table* table, int key2, int del){ // return one str
 		}
 	}
 	return NULL;
+}
+
+//-----------------------------SPECIAL SEARCH FOR A FIRST KEY SPACE---------------------------------------------------------
+
+void search_all_releases(Table* table, char* key1){
+	return;
 }
 
 void print_table(Table* table){
@@ -354,10 +365,10 @@ int main(int argc, char const *argv[])
 		printf("%d %d %sppppp\n", inf1->x, inf1->y, inf1->string);
 	}
 
-	Info * inf2 = search_elements1_table(table, "n", 1);
+	InfoR * inf2 = search_elements1_table(table, "n", 0);
 	if(inf2){
-		for(int i = 0; inf2[i].string; i++){
-			printf(" %d %d  %d  %s\n", i, inf2[i].x, inf2[i].y, inf2[i].string);
+		for(int i = 0; inf2[i].info.string; i++){
+			printf(" %d %d  %d  %s\n", inf2[i].release, inf2[i].info.x, inf2[i].info.y, inf2[i].info.string);
 		}
 	}
 
