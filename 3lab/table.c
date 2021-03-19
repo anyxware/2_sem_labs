@@ -168,7 +168,7 @@ const Info* search1_table(Table* table, char* key1, int key2, int del){ //bin se
 	if(status != 0) return NULL;
 	ind1 -= table->ks1[ind1].release;
 	if(del){
-		for(;!strcmp(table->ks1[ind1].key, key1); ind1++){
+		for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
 			ind2 = table->ks1[ind1].item->ind2;
 			if(table->ks2[ind2].key == key2){
 				table->ks2[ind2].busy = 0;
@@ -184,7 +184,7 @@ const Info* search1_table(Table* table, char* key1, int key2, int del){ //bin se
 			}
 		}
 	}else{
-		for(;!strcmp(table->ks1[ind1].key, key1); ind1++){
+		for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
 			ind2 = table->ks1[ind1].item->ind2;
 			if(table->ks2[ind2].key == key2){
 				return (const Info*)&(table->ks1[ind1].item->info);
@@ -228,7 +228,7 @@ const Info* search2_table(Table* table, char* key1, int key2, int del){ //hash_s
 	return NULL;
 }
 
-Info* search_elements1_table(Table* table, char* key1, int del){
+Info* search_elements1_table(Table* table, char* key1, int del){ //return massiv with structures and null-term structure
 	if(!table->csize) return NULL;
 	int left = 0, right = table->csize - 1;
 	int ind1, ind2, ind0, status = 1;
@@ -244,7 +244,7 @@ Info* search_elements1_table(Table* table, char* key1, int del){
 	ind1 -= table->ks1[ind1].release;
 	ind0 = ind1;
 	if(del){
-		for(;!strcmp(table->ks1[ind1].key, key1); ind1++){
+		for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
 			ind2 = table->ks1[ind1].item->ind2;
 			table->ks2[ind2].busy = 0;
 			free(table->ks1[ind1].item->info.string);
@@ -252,18 +252,18 @@ Info* search_elements1_table(Table* table, char* key1, int del){
 			free(table->ks1[ind1].key);
 		}
 		memmove(&(table->ks1[ind0]), &(table->ks1[ind1]), (table->csize - ind1) * sizeof(KeySpace1));
-		for(int i = ind0; i < ind1 - ind0; i++){
+		for(int i = ind0; i < ind1; i++){
 			table->ks1[i].item->ind1 -= ind1 - ind0;
 		}
 		table->csize -= ind1 - ind0;
 	}else{
-		int count;
-		for(;!strcmp(table->ks1[ind1].key, key1); ind1++){
-			count++;
+		int count = 0;
+		for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
+			count+=1;
 		}
 		ind1 = ind0;
 		Info* information = (Info*)malloc((count + 1) * sizeof(Info));
-		for(;!strcmp(table->ks1[ind1].key, key1); ind1++){
+		for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
 			memcpy(&(information[ind1 - ind0]), &(table->ks1[ind1].item->info), sizeof(Info));
 			information[ind1 - ind0].string = (char*)malloc(strlen(table->ks1[ind1].item->info.string));
 			strcpy(information[ind1 - ind0].string, table->ks1[ind1].item->info.string);
@@ -274,16 +274,50 @@ Info* search_elements1_table(Table* table, char* key1, int del){
 	return NULL;
 }
 
+Info* search_elements2_table(Table* table, int key2, int del){ // return one structure
+	if(!table->csize) return NULL;
+	int ind1, ind2;
+	if(del){ //delete
+		for(int i = 0; i < table->msize; i++){
+			ind2 = (hash1(key2) + i * (hash2(key2) % table->msize)) % table->msize;
+			if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
+				ind1 = table->ks2[ind2].item->ind1;
+				table->ks2[ind2].busy = 0;
+				free(table->ks1[ind1].item->info.string);
+				free(table->ks1[ind1].item);
+				free(table->ks1[ind1].key);
+				memmove(&(table->ks1[ind1]), &(table->ks1[ind1+1]), (table->csize - ind1) * sizeof(KeySpace1));
+				for(int i = ind1; i < table->csize - 1; i ++){
+					table->ks1[i].item->ind1--;
+				}
+				table->csize--;
+				return NULL;
+			}
+		}
+	}else{ //search
+		for(int i = 0; i < table->msize; i++){
+			ind2 = (hash1(key2) + i * (hash2(key2) % table->msize)) % table->msize;
+			if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
+				Info* info = (Info*)malloc(sizeof(Info));
+				memcpy(info, &(table->ks2[ind2].item->info), sizeof(Info));
+				info->string = (char*)malloc(strlen(table->ks2[ind2].item->info.string));
+				strcpy(info->string, table->ks2[ind2].item->info.string);
+				return info;
+			}
+		}
+	}
+	return NULL;
+}
+
 void print_table(Table* table){
 	for(int i = 0; i < table->csize; i++){
 		printf("%d ", i);
-		printf("key %s\t", table->ks1[i].key);
-		printf("rel %d\t", table->ks1[i].release);
-		printf("%d %d %s ", table->ks1[i].item->info.x, table->ks1[i].item->info.y, table->ks1[i].item->info.string);
+		printf("Info: %d %d %s;\n", table->ks1[i].item->info.x, table->ks1[i].item->info.y, table->ks1[i].item->info.string);
+		printf("  key1: %s,", table->ks1[i].key);
+		printf("  rel %d;\n", table->ks1[i].release);
 		int ind1 = table->ks1[i].item->ind1;
 		int ind2 = table->ks1[i].item->ind2;
-		printf("%s ", table->ks1[ind1].key);
-		printf("%d\n", table->ks2[ind2].key);
+		printf("  key2: %d;\n", table->ks2[ind2].key);
 		
 	}
 }
@@ -320,9 +354,17 @@ int main(int argc, char const *argv[])
 		printf("%d %d %sppppp\n", inf1->x, inf1->y, inf1->string);
 	}
 
-	Info * inf2 = search_elements1_table(table, "a", 0);
-	for(int i = 0; inf2[i].string; i++){
-		printf(" %d %d  %d  %s\n", i, inf2[i].x, inf2[i].y, inf2[i].string);
+	Info * inf2 = search_elements1_table(table, "n", 1);
+	if(inf2){
+		for(int i = 0; inf2[i].string; i++){
+			printf(" %d %d  %d  %s\n", i, inf2[i].x, inf2[i].y, inf2[i].string);
+		}
+	}
+
+	Info * inf3 = search_elements2_table(table, 2, 0);
+	if(inf3){
+			printf(" %d %d   %s\n", inf3->x, inf3->y, inf3->string);
+		
 	}
 
 	print_table(table);
