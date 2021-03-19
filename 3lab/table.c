@@ -267,10 +267,8 @@ Info* search_elements1_table(Table* table, char* key1, int del){
 			memcpy(&(information[ind1 - ind0]), &(table->ks1[ind1].item->info), sizeof(Info));
 			information[ind1 - ind0].string = (char*)malloc(strlen(table->ks1[ind1].item->info.string));
 			strcpy(information[ind1 - ind0].string, table->ks1[ind1].item->info.string);
-
-			//---------------------------------------
-			//(const Info*)&(table->ks1[ind1].item->info);
 		}
+		information[ind1 - ind0].string = NULL;
 		return information;
 	}
 	return NULL;
@@ -307,22 +305,25 @@ int main(int argc, char const *argv[])
 	insert_table(table, "x", 2, info2);
 	insert_table(table, "n", 3, info2);
 	insert_table(table, "a", 4, info3);
-	insert_table(table, "a", 5, info1);
+	insert_table(table, "a", 5, info2);
 	insert_table(table, "y", 6, info2);
 	insert_table(table, "n", 7, info3);
 	insert_table(table, "y", 8, info3);
 
-	const Info* inf = search1_table(table, "y", 8, 1);
+	const Info* inf = search1_table(table, "y", 8, 0);
 	if(inf && inf != (const Info*)table){
 		printf("%d %d %s\n", inf->x, inf->y, inf->string);
 	}
 
-	const Info* inf1 = search2_table(table, "a", 1, 1);
+	const Info* inf1 = search2_table(table, "a", 2, 0);
 	if(inf1 && inf1 != (const Info*)table){
 		printf("%d %d %sppppp\n", inf1->x, inf1->y, inf1->string);
 	}
 
-	//search_elements1_table(table, "a", 0);
+	Info * inf2 = search_elements1_table(table, "a", 0);
+	for(int i = 0; inf2[i].string; i++){
+		printf(" %d %d  %d  %s\n", i, inf2[i].x, inf2[i].y, inf2[i].string);
+	}
 
 	print_table(table);
 
