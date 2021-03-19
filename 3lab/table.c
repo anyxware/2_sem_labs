@@ -171,6 +171,35 @@ void free_items(Table* table, int ind1, int ind2, int ind0, char* key1){
 	table->csize -= ind1 - ind0;
 }
 
+Info* copy_info(Table* table, int ind, int num){
+	Info* info = (Info*)malloc(sizeof(Info));
+	if(num == 1){
+		memcpy(info, &(table->ks1[ind].item->info), sizeof(Info));
+		info->string = (char*)malloc(strlen(table->ks1[ind].item->info.string)+1);
+		strcpy(info->string, table->ks1[ind].item->info.string);
+	}else if(num == 2){
+		memcpy(info, &(table->ks2[ind].item->info), sizeof(Info));
+		info->string = (char*)malloc(strlen(table->ks2[ind].item->info.string)+1);
+		strcpy(info->string, table->ks2[ind].item->info.string);
+	}else{
+		free(info);
+		return NULL;
+	}
+	return info;
+}
+
+InfoR* copy_infor(Table* table, int ind1, int ind0, char* key1, int count){
+	InfoR* information = (InfoR*)malloc((count + 1) * sizeof(InfoR));
+	for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
+		memcpy(&(information[ind1 - ind0].info), &(table->ks1[ind1].item->info), sizeof(Info));
+		information[ind1 - ind0].info.string = (char*)malloc(strlen(table->ks1[ind1].item->info.string)+1);
+		strcpy(information[ind1 - ind0].info.string, table->ks1[ind1].item->info.string);
+		information[ind1 - ind0].release = table->ks1[ind1].release;
+	}
+	information[ind1 - ind0].info.string = NULL;
+	return information;
+}
+
 const Info* KS1_1_search_table(Table* table, char* key1, int key2){ //bin search  and delete
 	if(!table->csize) return NULL;
 	int ind1, ind2;
@@ -195,11 +224,7 @@ Info* KS1_1_copy_search_table(Table* table, char* key1, int key2){ //bin search 
 	for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
 		ind2 = table->ks1[ind1].item->ind2;
 		if(table->ks2[ind2].key == key2){
-			Info* info = (Info*)malloc(sizeof(Info));
-			memcpy(info, &(table->ks1[ind1].item->info), sizeof(Info));
-			info->string = (char*)malloc(strlen(table->ks1[ind1].item->info.string)+1);
-			strcpy(info->string, table->ks1[ind1].item->info.string);
-			return info;
+			return copy_info(table, ind1, 1);
 		}
 	}
 	return NULL;
@@ -244,11 +269,7 @@ Info* KS2_1_copy_search_table(Table* table, char* key1, int key2){ //hash search
 		if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
 			ind1 = table->ks2[ind2].item->ind1;
 			if(!strcmp(table->ks1[ind1].key, key1)){
-				Info* info = (Info*)malloc(sizeof(Info));
-				memcpy(info, &(table->ks2[ind2].item->info), sizeof(Info));
-				info->string = (char*)malloc(strlen(table->ks2[ind2].item->info.string)+1);
-				strcpy(info->string, table->ks2[ind2].item->info.string);
-				return info;
+				return copy_info(table, ind2, 2);
 			}
 		}
 	}
@@ -273,7 +294,6 @@ void KS2_1_delete_table(Table* table, char* key1, int key2){ //hash search and d
 //-----------------------------ONE KEY(_2_)---------------------------------------------------------
 //returns copies of elements
 
-
 InfoR* KS1_2_search_table(Table* table, char* key1){ //return massive with structures with number of release and last struct is null-term structure
 	if(!table->csize) return NULL;
 	int ind1, ind2, ind0;
@@ -288,13 +308,26 @@ InfoR* KS1_2_search_table(Table* table, char* key1){ //return massive with struc
 	ind1 = ind0;
 	InfoR* information = (InfoR*)malloc((count + 1) * sizeof(InfoR));
 	for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
-		memcpy(&(information[ind1 - ind0].info), &(table->ks1[ind1].item->info), sizeof(Info));
-		information[ind1 - ind0].info.string = (char*)malloc(strlen(table->ks1[ind1].item->info.string)+1);
-		strcpy(information[ind1 - ind0].info.string, table->ks1[ind1].item->info.string);
+		information[ind1 - ind0].info = table->ks1[ind1].item->info;
 		information[ind1 - ind0].release = table->ks1[ind1].release;
 	}
 	information[ind1 - ind0].info.string = NULL;
 	return information;
+}
+
+InfoR* KS1_2_copy_search_table(Table* table, char* key1){ //return massive with structures with number of release and last struct is null-term structure
+	if(!table->csize) return NULL;
+	int ind1, ind2, ind0;
+	ind1 = bin_search(table, key1);
+	if(ind1 == -1) return NULL;
+
+	ind0 = ind1;
+	int count = 0;
+	for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
+		count+=1;
+	}
+	ind1 = ind0;
+	return copy_infor(table, ind1, ind0, key1, count);
 }
 
 void KS1_2_delete_table(Table* table, char* key1){ //return massive with structures with number of release and last struct is null-term structure
@@ -326,11 +359,7 @@ Info* KS2_2_copy_search_table(Table* table, int key2){ // return one structure
 	for(int i = 0; i < table->msize; i++){
 		ind2 = (hash1(key2) + i * (hash2(key2) % table->msize)) % table->msize;
 		if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
-			Info* info = (Info*)malloc(sizeof(Info));
-			memcpy(info, &(table->ks2[ind2].item->info), sizeof(Info));
-			info->string = (char*)malloc(strlen(table->ks2[ind2].item->info.string)+1);
-			strcpy(info->string, table->ks2[ind2].item->info.string);
-			return info;
+			return copy_info(table, ind2, 2);
 		}
 	}
 	return NULL;
@@ -441,7 +470,7 @@ int main(int argc, char const *argv[])
 	int i;
 	for(i = 0 ;infor[i].info.string; i++){
 		printf("%d %d %d %s\n", infor[i].release, infor[i].info.x, infor[i].info.y, infor[i].info.string);
-		free(infor[i].info.string);
+		//free(infor[i].info.string);
 	}
 	free(infor);
 	KS1_2_delete_table(table, "a");
