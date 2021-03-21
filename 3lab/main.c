@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "lab6.c"
 
 char* get_str(){
 	char buf[80] = {0};
@@ -97,6 +98,20 @@ int read_int(char* s){
 	return answ;
 }
 
+char* read_str(char* s){
+	char* str;
+	printf("\033[1;32mInput %s: \033[0m", s);
+	str = get_str(); printf("\n");
+	while(!strlen(str)){
+		error();
+		printf("\033[1;32mInput %s: \033[0m",s);
+		free(str);
+		str = get_str();
+		printf("\n");
+	}
+	return str;
+}
+
 int main(int argc, char const *argv[])
 {
 	Table *table = NULL;
@@ -115,10 +130,11 @@ int main(int argc, char const *argv[])
 		printf("3.Find info\n");
 		printf("4.Delete info\n");
 		printf("5.Show table\n");
-		printf("6.Remove table\033[0m\n\n");
+		printf("6.Remove table\n");
+		printf("7.Play game\033[0m\n");
+		printf("(Ctrl+D if you want to exit)\n\n");
 		
-		answ = read_answer(7);
-		//flush();
+		answ = read_answer(8);
 		if(!answ) break;
 
 		if(answ == 1){
@@ -137,13 +153,11 @@ int main(int argc, char const *argv[])
 				printf("\033[1;31mNo table\033[0m\n");
 				continue;
 			}
-			printf("\033[1;32mInput key1: \033[0m");
-			key1 = get_str(); printf("\n");
+			key1 = read_str("key1");
 			key2 = read_int("\033[1;33mkey2\033[0m");
 			info.x = read_int("\033[1;34mx\033[0m");
 			info.y = read_int("\033[1;35my\033[0m");
-			printf("\033[1;36mInput string: \033[0m");
-			info.string = get_str(); printf("\n");
+			info.string = read_str("string");
 
 			status = insert_table(table, key1, key2, info);
 			if(status < 0) printf("\033[1;31mDidn't insert\033[0m\n");
@@ -164,8 +178,7 @@ int main(int argc, char const *argv[])
 				printf("1.Use binary search\n");
 				printf("2.Use hash search\n");
 				status = read_answer(2);
-				printf("Input key1: ");
-				key1 = get_str(); printf("\n");
+				key1 = read_str("key1");
 				key2 = read_int("key2");
 				if(status == 1){
 					const Info* info = KS1_1_search_table(table, key1, key2);
@@ -192,8 +205,7 @@ int main(int argc, char const *argv[])
 				printf("2.Use second key\n");
 				status = read_answer(2);
 				if(status == 1){
-					printf("Input key1: ");
-					key1 = get_str(); printf("\n");
+					key1 = read_str("key1");
 					InfoR* infor = KS1_2_search_table(table, key1);
 					if(infor){
 						for(int i = 0 ;infor[i].info.string; i++){
@@ -218,8 +230,7 @@ int main(int argc, char const *argv[])
 				}
 			}
 			else if(status == 3){
-				printf("Input key1: ");
-				key1 = get_str(); printf("\n");
+				key1 = read_str("key1");
 				rel = read_int("release");
 				const Info* info = search_releases_table(table, key1, rel);
 				if(info){
@@ -245,8 +256,7 @@ int main(int argc, char const *argv[])
 				printf("1.Use binary search\n");
 				printf("2.Use hash search\n");
 				status = read_answer(2);
-				printf("Input key1: ");
-				key1 = get_str(); printf("\n");
+				key1 = read_str("key1");
 				key2 = read_int("key2");
 				if(status == 1){
 					KS1_1_delete_table(table, key1, key2);
@@ -261,8 +271,7 @@ int main(int argc, char const *argv[])
 				printf("2.Use second key\n");
 				status = read_answer(2);
 				if(status == 1){
-					printf("Input key1: ");
-					key1 = get_str(); printf("\n");
+					key1 = read_str("key1");
 					KS1_2_delete_table(table, key1);
 					free(key1);
 				}
@@ -272,8 +281,7 @@ int main(int argc, char const *argv[])
 				}
 			}
 			else if(status == 3){
-				printf("Input key1: ");
-				key1 = get_str(); printf("\n");
+				key1 = read_str("key1");
 				rel = read_int("release");
 				delete_releases_table(table, key1, rel);
 				free(key1);
@@ -294,6 +302,9 @@ int main(int argc, char const *argv[])
 			}
 			clear_table(table);
 			table = NULL;
+		}
+		else if(answ == 7){
+			game();
 		}
 		printf("\n");
 	}

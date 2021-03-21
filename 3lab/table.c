@@ -115,7 +115,8 @@ int insert_table(Table* table,const char* key1, int key2, Info info){
 
 	//create the Item
 	table->ks1[ind1].item = (Item*)malloc(sizeof(Item));
-	memcpy(&(table->ks1[ind1].item->info), &info, sizeof(info));
+	table->ks1[ind1].item->info.x = info.x;
+	table->ks1[ind1].item->info.y = info.y;
 	table->ks1[ind1].item->info.string = (char*)malloc(strlen(info.string)+1);
 	strcpy(table->ks1[ind1].item->info.string, info.string);
 	table->ks1[ind1].item->ind1 = ind1;
@@ -160,7 +161,7 @@ void free_item(Table* table, int ind1, int ind2){
 }
 
 void free_items(Table* table, int ind1, int ind2, int ind0, char* key1){
-	for(;ind1 < table->csize - 1 && !strcmp(table->ks1[ind1].key, key1); ind1++){
+	for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
 		ind2 = table->ks1[ind1].item->ind2;
 		table->ks2[ind2].busy = 0;
 		free(table->ks1[ind1].item->info.string);
@@ -168,10 +169,10 @@ void free_items(Table* table, int ind1, int ind2, int ind0, char* key1){
 		free(table->ks1[ind1].item);
 	}
 	memmove(&(table->ks1[ind0]), &(table->ks1[ind1]), (table->csize - ind1) * sizeof(KeySpace1));
-	for(int i = ind0; i < ind1; i++){
+	table->csize -= ind1 - ind0;
+	for(int i = ind0; i < ind1 && i < table->csize; i++){
 		table->ks1[i].item->ind1 -= ind1 - ind0;
 	}
-	table->csize -= ind1 - ind0;
 }
 
 Info* copy_info(Table* table, int ind, int num){
