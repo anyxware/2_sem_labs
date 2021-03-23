@@ -18,21 +18,34 @@ unsigned int hash1(int key){ //HashFAQ6
     hash ^= (hash >> 11);
     hash += (hash << 15);
 
-    return hash ? hash : hash1(1);
+    return hash;
 }
 
-unsigned int hash2(int key){ //HashRot13
+unsigned int hash2_in(int key){ //HashRot13
 	char* str = (char*)&key;
 
     unsigned int hash = 0;
 
-    for(; *str; str++)
+    for(int i = 0; i < sizeof(int); i++)
     {
         hash += (unsigned char)(*str);
         hash -= (hash << 13) | (hash >> 19);
+        str++;
     }
 
-    return hash ? hash : hash2(1);
+    return hash;
+
+}
+
+unsigned int hash2(int key, int msize){
+
+	unsigned int hash = hash2_in(key);
+	
+	while(!(hash % msize)){
+		hash = hash2_in(hash);
+	}
+
+    return hash % msize;
 
 }
 
@@ -104,7 +117,7 @@ int insert_table(Table* table,const char* key1, int key2, Info info){
 
 	//insert into the second table
 	for(int i = 0; i < table->msize; i++){
-		int index = (hash1(key2) + i * (hash2(key2) % table->msize)) % table->msize;
+		int index = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
 		if(!(table->ks2[index].busy)){
 			table->ks2[index].busy = 1;
 			table->ks2[index].key = key2;
@@ -144,7 +157,8 @@ int bin_search(Table* table, char* key1){
 			right = ind1 - 1;
 	}
 	if(status != 0) return -1;
-	ind1 -= table->ks1[ind1].release;
+	for(;ind1 >= 0 && !strcmp(table->ks1[ind1].key, key1); ind1--){}
+	ind1++;
 	return ind1;
 }
 
@@ -207,6 +221,7 @@ InfoR* copy_infor(Table* table, int ind1, int ind0, char* key1, int count){
 const Info* KS1_1_search_table(Table* table, char* key1, int key2){ //bin search  and delete
 	if(!table->csize) return NULL;
 	int ind1, ind2;
+	
 	ind1 = bin_search(table, key1);
 	if(ind1 == -1) return NULL;
 
@@ -254,7 +269,7 @@ const Info* KS2_1_search_table(Table* table, char* key1, int key2){ //hash searc
 	int ind1, ind2;
 
 	for(int i = 0; i < table->msize; i++){
-		ind2 = (hash1(key2) + i * (hash2(key2) % table->msize)) % table->msize;
+		ind2 = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
 		if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
 			ind1 = table->ks2[ind2].item->ind1;
 			if(!strcmp(table->ks1[ind1].key, key1))
@@ -269,7 +284,7 @@ Info* KS2_1_copy_search_table(Table* table, char* key1, int key2){ //hash search
 	int ind1, ind2;
 
 	for(int i = 0; i < table->msize; i++){
-		ind2 = (hash1(key2) + i * (hash2(key2) % table->msize)) % table->msize;
+		ind2 = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
 		if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
 			ind1 = table->ks2[ind2].item->ind1;
 			if(!strcmp(table->ks1[ind1].key, key1)){
@@ -285,7 +300,7 @@ void KS2_1_delete_table(Table* table, char* key1, int key2){ //hash search and d
 	int ind1, ind2;
 
 	for(int i = 0; i < table->msize; i++){
-		ind2 = (hash1(key2) + i * (hash2(key2) % table->msize)) % table->msize;
+		ind2 = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
 		if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
 			ind1 = table->ks2[ind2].item->ind1;
 			if(!strcmp(table->ks1[ind1].key, key1))
@@ -348,7 +363,7 @@ const Info* KS2_2_search_table(Table* table, int key2){ // return one structure
 	int ind1, ind2;
 
 	for(int i = 0; i < table->msize; i++){
-		ind2 = (hash1(key2) + i * (hash2(key2) % table->msize)) % table->msize;
+		ind2 = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
 		if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
 			return (const Info*)&(table->ks2[ind2].item->info);
 		}
@@ -361,7 +376,7 @@ Info* KS2_2_copy_search_table(Table* table, int key2){ // return one structure
 	int ind1, ind2;
 
 	for(int i = 0; i < table->msize; i++){
-		ind2 = (hash1(key2) + i * (hash2(key2) % table->msize)) % table->msize;
+		ind2 = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
 		if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
 			return copy_info(table, ind2, 2);
 		}
@@ -374,7 +389,7 @@ void KS2_2_delete_table(Table* table, int key2){ // return one structure
 	int ind1, ind2;
 
 	for(int i = 0; i < table->msize; i++){
-		ind2 = (hash1(key2) + i * (hash2(key2) % table->msize)) % table->msize;
+		ind2 = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
 		if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
 			ind1 = table->ks2[ind2].item->ind1;
 			free_item(table, ind1, ind2);
