@@ -656,6 +656,7 @@ void garbage_collector(){
 	free_RAM(ks1, ks2, file);
 }
 
+
 int main(int argc, char const *argv[])
 {
 	create_wtable(57);
