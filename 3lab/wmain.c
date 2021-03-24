@@ -1,4 +1,4 @@
-#include "table.h"
+#include "wtable.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -109,50 +109,44 @@ char* read_str(char* s){
 		str = get_str();
 		printf("\n");
 	}
+
 	return str;
 }
 
-void D_Create(Table** table){
-	if(*table){
-		printf("\033[1;31mTable has already created\033[0m\n");
-		return;
-	}
+void D_Create(){
 	int msize = read_msize();
-	*table = create_table(msize);
+	create_wtable(msize);
 	printf("Table was created with size %d\n", msize);
 }
 
-void D_Insert(Table** table){
+void D_Insert(){
 	char* key1;
 	int key2;
-	Info info;
+	InfoS infos;
 	int status;
 
-	if(!*table){
-		printf("\033[1;31mNo table\033[0m\n");
-		return;
-	}
 	key1 = read_str("key1");
-	key2 = read_int("\033[1;33mkey2\033[0m");
-	info.x = read_int("\033[1;34mx\033[0m");
-	info.y = read_int("\033[1;35my\033[0m");
-	info.string = read_str("string");
 
-	status = insert_table(*table, key1, key2, info);
+	char key1_1[N] = {'0'};
+	for (int i = 0; i < N && i < strlen(key1); ++i){
+		key1_1[i] = key1[i];
+	}
+
+	key2 = read_int("\033[1;33mkey2\033[0m");
+	infos.info.x = read_int("\033[1;34mx\033[0m");
+	infos.info.y = read_int("\033[1;35my\033[0m");
+	infos.string = read_str("string");
+
+	status = insert_wtable(key1_1, key2, infos);
 	if(status < 0) printf("\033[1;31mDidn't insert\033[0m\n");
 	free(key1);
-	free(info.string);
+	free(infos.string);
 }
 
-void D_Find(Table** table){
+void D_Find(){
 	char* key1;
 	int key2;
-	int status, rel;
-
-	if(!*table){
-		printf("\033[1;31mNo table\033[0m\n");
-		return;
-	}	
+	int status, rel;	
 	
 	printf("1.Use two keys\n");
 	printf("2.Use one key\n");
@@ -163,20 +157,27 @@ void D_Find(Table** table){
 		printf("2.Use hash search\n");
 		status = read_answer(2);
 		key1 = read_str("key1");
+
+		char key1_1[N] = {'0'};
+		for (int i = 0; i < N && i < strlen(key1); ++i){
+			key1_1[i] = key1[i];
+		}
+
 		key2 = read_int("key2");
+
 		if(status == 1){
-			const Info* info = KS1_1_search_table(*table, key1, key2);
-			if(info){
-				printf("%d %d %s\n", info->x, info->y, info->string);
+			InfoS* infos = KS1_1_search_wtable(key1_1, key2);
+			if(infos){
+				printf("%d %d %s\n", infos->info.x, infos->info.y, infos->string);
 			}
 			else{
 				printf("Nothing\n");
 			}
 		}
 		else if(status == 2){
-			const Info* info = KS2_1_search_table(*table, key1, key2);
-			if(info){
-				printf("%d %d %s\n", info->x, info->y, info->string);
+			InfoS* infos = KS2_1_search_wtable(key1_1, key2);
+			if(infos){
+				printf("%d %d %s\n", infos->info.x, infos->info.y, infos->string);
 			}
 			else{
 				printf("Nothing\n");
@@ -190,12 +191,18 @@ void D_Find(Table** table){
 		status = read_answer(2);
 		if(status == 1){
 			key1 = read_str("key1");
-			InfoR* infor = KS1_2_search_table(*table, key1);
-			if(infor){
-				for(int i = 0 ;infor[i].info.string; i++){
-					printf("%d %d %d %s\n", infor[i].release, infor[i].info.x, infor[i].info.y, infor[i].info.string);
+
+			char key1_1[N] = {'0'};
+			for (int i = 0; i < N && i < strlen(key1); ++i){
+				key1_1[i] = key1[i];
+			}
+
+			InfoSR* infosr = KS1_2_search_wtable(key1_1);
+			if(infosr){
+				for(int i = 0 ;infosr[i].string; i++){
+					printf("%d %d %d %s\n", infosr[i].release, infosr[i].info.x, infosr[i].info.y, infosr[i].string);
 				}
-				free(infor);
+				free(infosr);
 			}
 			else{
 				printf("Nothing\n");
@@ -204,9 +211,9 @@ void D_Find(Table** table){
 		}
 		else if(status == 2){
 			key2 = read_int("key2");
-			const Info* info = KS2_2_search_table(*table, key2);
-			if(info){
-				printf("%d %d %s\n", info->x, info->y, info->string);
+			InfoS* infos = KS2_2_search_wtable(key2);
+			if(infos){
+				printf("%d %d %s\n", infos->info.x, infos->info.y, infos->string);
 			}
 			else{
 				printf("Nothing\n");
@@ -215,10 +222,16 @@ void D_Find(Table** table){
 	}
 	else if(status == 3){
 		key1 = read_str("key1");
+
+		char key1_1[N] = {'0'};
+		for (int i = 0; i < N && i < strlen(key1); ++i){
+			key1_1[i] = key1[i];
+		}
+
 		rel = read_int("release");
-		const Info* info = search_releases_table(*table, key1, rel);
-		if(info){
-			printf("%d %d %s\n", info->x, info->y, info->string);
+		InfoS* infos = search_releases_wtable(key1_1, rel);
+		if(infos){
+			printf("%d %d %s\n", infos->info.x, infos->info.y, infos->string);
 		}
 		else{
 			printf("Nothing\n");
@@ -227,15 +240,11 @@ void D_Find(Table** table){
 	}
 }
 
-void D_Delete(Table** table){
+void D_Delete(){
 	char* key1;
 	int key2;
 	int status, rel;
 
-	if(!*table){
-		printf("\033[1;31mNo table\033[0m\n");
-		return;
-	}
 	printf("1.Use two keys\n");
 	printf("2.Use one key\n");
 	printf("3.Use first key and key's release\n");
@@ -245,12 +254,18 @@ void D_Delete(Table** table){
 		printf("2.Use hash search\n");
 		status = read_answer(2);
 		key1 = read_str("key1");
+
+		char key1_1[N] = {'0'};
+		for (int i = 0; i < N && i < strlen(key1); ++i){
+			key1_1[i] = key1[i];
+		}
+
 		key2 = read_int("key2");
 		if(status == 1){
-			KS1_1_delete_table(*table, key1, key2);
+			KS1_1_delete_wtable(key1_1, key2);
 		}
 		else if(status == 2){
-			KS2_1_delete_table(*table, key1, key2);
+			KS2_1_delete_wtable(key1_1, key2);
 		}
 		free(key1);
 	}
@@ -260,45 +275,48 @@ void D_Delete(Table** table){
 		status = read_answer(2);
 		if(status == 1){
 			key1 = read_str("key1");
-			KS1_2_delete_table(*table, key1);
+
+			char key1_1[N] = {'0'};
+			for (int i = 0; i < N && i < strlen(key1); ++i){
+				key1_1[i] = key1[i];
+			}
+
+			KS1_2_delete_wtable(key1_1);
 			free(key1);
 		}
 		else if(status == 2){
 			key2 = read_int("key2");
-			KS2_2_delete_table(*table, key2);
+			KS2_2_delete_wtable(key2);
 		}
 	}
 	else if(status == 3){
 		key1 = read_str("key1");
+
+		char key1_1[N] = {'0'};
+		for (int i = 0; i < N && i < strlen(key1); ++i){
+			key1_1[i] = key1[i];
+		}
+
 		rel = read_int("release");
-		delete_releases_table(*table, key1, rel);
+		delete_releases_wtable(key1_1, rel);
 		free(key1);
 	}
 }
 
-void D_Show(Table** table){
-	if(!*table){
-		printf("\033[1;31mNo table\033[0m\n");
-		return;
-	}
-	show_table(*table);
+void D_Show(){
+	show_wtable();
 }
 
-void D_Clear(Table** table){
-	if(!*table){
-		printf("\033[1;31mNo table\033[0m\n");
-		return;
-	}
-	clear_table(*table);
-	*table = NULL;
+void D_Clear(){
+	clear_wtable();
 }
 
-void D_Game(Table** table){
+void D_GarbageCollector(){
+	garbage_collector_wtable();
+}
+
+void D_Game(){
 	game();
-}
-
-void deleteTable(Table** table){
-	if(*table) clear_table(*table);
 }
 
 int dialogue(){
@@ -310,9 +328,10 @@ int dialogue(){
 	printf("4.Delete info\n");
 	printf("5.Show table\n");
 	printf("6.Remove table\n");
-	printf("7.Play game\033[0m\n");
+	printf("7.Garbage Collector\n");
+	printf("8.Play game\033[0m\n");
 	printf("(Ctrl+D if you want to exit)\n\n");
-	return read_answer(8);
+	return read_answer(9);
 }
 
 int main(int argc, char const *argv[])
@@ -321,7 +340,7 @@ int main(int argc, char const *argv[])
 
 	int answ;
 
-	void (*funcs[8])(Table** table) = {NULL, &D_Create, &D_Insert, &D_Find, &D_Delete, &D_Show, &D_Clear, &D_Game};
+	void (*funcs[9])() = {NULL, &D_Create, &D_Insert, &D_Find, &D_Delete, &D_Show, &D_Clear, &D_GarbageCollector, &D_Game};
 
 	while(answ = dialogue()){
 		if(funcs[answ]){
@@ -329,6 +348,5 @@ int main(int argc, char const *argv[])
 		}
 	}
 
-	deleteTable(&table);
 	return 0;
 }

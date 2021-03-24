@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "wtable.h"
 
 unsigned int hash1(int key){ //HashFAQ6
@@ -104,12 +105,19 @@ void free_RAM(KeySpace1* ks1, KeySpace2* ks2, FILE* file){
     fclose(file);
 }
 
-int insert_wtable(char key1[N], int key2, int x, int y, char* string){
+int insert_wtable(char key1[N], int key2, InfoS infos){
 	Table table;
 	KeySpace1* ks1;
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "r+b");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return -1;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -184,12 +192,12 @@ int insert_wtable(char key1[N], int key2, int x, int y, char* string){
 	item.ind1 = ind1;
 	item.ind2 = ind2;
 	item.del = 0;
-	item.info.x = x;
-	item.info.y = y;
-	item.info.len = strlen(string);
+	item.info.x = infos.info.x;
+	item.info.y = infos.info.y;
+	item.info.len = strlen(infos.string);
 	fwrite(&item, sizeof(Item), 1, file);
 	long int pos = ftell(file) - sizeof(Item);
-	fwrite(string, sizeof(char), strlen(string), file);
+	fwrite(infos.string, sizeof(char), strlen(infos.string), file);
 	//fclose(file);
 	
 	ks1[ind1].pos = pos;
@@ -270,6 +278,13 @@ InfoS* KS1_1_search_wtable(char key1[N], int key2){ //bin search  and delete
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "rb");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return NULL;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -302,12 +317,60 @@ InfoS* KS1_1_search_wtable(char key1[N], int key2){ //bin search  and delete
 	return NULL;
 }
 
+void free_item(Item item, Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file, int ind1, int ind2){
+	item.del = 1;
+	fseek(file, -sizeof(Item), SEEK_CUR);
+	fwrite(&item, sizeof(Item), 1, file);
+	(*ks2)[ind2].busy = 0;
+	memmove(&((*ks1)[ind1]), &((*ks1)[ind1+1]), (table->csize - ind1 - 1) * sizeof(KeySpace1));
+	for(int i = ind1; i < table->csize - 1; i++){
+		rewind(file);
+    	fseek(file, (*ks1)[i].pos, SEEK_CUR);
+    	fread(&item, sizeof(Item), 1, file);
+    	item.ind1--;
+    	fseek(file, -sizeof(Item), SEEK_CUR);
+    	fwrite(&item, sizeof(Item), 1, file);
+    }
+    table->csize--;
+}
+
+void free_items(Table* table, KeySpace1** ks1, KeySpace2** ks2, int ind1, int ind0, char* key1, FILE* file){
+	int ind2;
+	Item item;
+	for(;ind1 < table->csize && !strcmp((*ks1)[ind1].key, key1); ind1++){
+		item = read_item1(file, *ks1, ind1);
+		item.del = 1;
+		fseek(file, -sizeof(Item), SEEK_CUR);
+		fwrite(&item, sizeof(Item), 1, file);
+		ind2 = item.ind2;
+		(*ks2)[ind2].busy = 0;
+	}
+	memmove(&((*ks1)[ind0]), &((*ks1)[ind1]), (table->csize - ind1) * sizeof(KeySpace1));
+	table->csize -= ind1 - ind0;
+	for(int i = ind0; i < ind1 && i < table->csize; i++){
+		rewind(file);
+    	fseek(file, (*ks1)[i].pos, SEEK_CUR);
+    	fread(&item, sizeof(Item), 1, file);
+    	item.ind1 -= ind1 - ind0;
+    	fseek(file, -sizeof(Item), SEEK_CUR);
+    	fwrite(&item, sizeof(Item), 1, file);
+    	printf("%s %d %d\n",(*ks1)[i].key, item.info.x, item.info.y);
+	}
+}
+
 void KS1_1_delete_wtable(char key1[N], int key2){ //bin search  and delete
 	Table table;
 	KeySpace1* ks1;
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "r+b");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -329,11 +392,14 @@ void KS1_1_delete_wtable(char key1[N], int key2){ //bin search  and delete
 		Item item = read_item1(file, ks1, ind1);
 		ind2 = item.ind2;
 		if(ks2[ind2].key == key2 && !item.del){
-			item.del = 1;
-			fseek(file, -sizeof(Item), SEEK_CUR);
-			fwrite(&item, sizeof(Item), 1, file);			
+			free_item(item, &table, &ks1, &ks2, file, ind1, ind2);
+			break;
 		}
 	}
+	rewind(file);
+	fwrite(&table, sizeof(Table), 1, file);
+	fwrite(ks1, sizeof(KeySpace1), table.msize, file);
+    fwrite(ks2, sizeof(KeySpace2), table.msize, file);
 
 	free_RAM(ks1, ks2, file);
 }
@@ -344,6 +410,13 @@ InfoS* KS2_1_search_wtable(char* key1, int key2){ //hash search and delete
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "rb");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return NULL;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -376,6 +449,13 @@ void KS2_1_delete_wtable(char* key1, int key2){ //hash search and delete
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "r+b");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -392,12 +472,15 @@ void KS2_1_delete_wtable(char* key1, int key2){ //hash search and delete
 			Item item = read_item2(file, ks2, ind2);
 			ind1 = item.ind1;
 			if(!strcmp(ks1[ind1].key, key1)){
-				item.del = 1;
-				fseek(file, -sizeof(Item), SEEK_CUR);
-				fwrite(&item, sizeof(Item), 1, file);
+				free_item(item, &table, &ks1, &ks2, file, ind1, ind2);
+    			break;
 			}
 		}
 	}
+	rewind(file);
+	fwrite(&table, sizeof(Table), 1, file);
+	fwrite(ks1, sizeof(KeySpace1), table.msize, file);
+    fwrite(ks2, sizeof(KeySpace2), table.msize, file);
 	free_RAM(ks1, ks2, file);
 }
 
@@ -408,6 +491,13 @@ InfoSR* KS1_2_search_wtable(char key1[N]){ //bin search  and delete
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "rb");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return NULL;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -441,6 +531,13 @@ void KS1_2_delete_wtable(char key1[N]){ //bin search  and delete
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "r+b");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -462,13 +559,13 @@ void KS1_2_delete_wtable(char key1[N]){ //bin search  and delete
 	}
 	ind1 = ind0;
 
-	for(;ind1 < table.csize && !strcmp(ks1[ind1].key, key1); ind1++){
-		Item item = read_item1(file, ks1, ind1);
-		item.del = 1;
-		fseek(file, -sizeof(Item), SEEK_CUR);
-		fwrite(&item, sizeof(Item), 1, file);
-	}
-	
+	free_items(&table, &ks1, &ks2, ind1, ind0, key1, file);
+
+	rewind(file);
+	fwrite(&table, sizeof(Table), 1, file);
+	fwrite(ks1, sizeof(KeySpace1), table.msize, file);
+    fwrite(ks2, sizeof(KeySpace2), table.msize, file);
+
 	free_RAM(ks1, ks2, file);
 }
 
@@ -478,6 +575,13 @@ InfoS* KS2_2_search_wtable(int key2){ //hash search and delete
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "rb");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return NULL;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -507,6 +611,13 @@ void KS2_2_delete_wtable(int key2){ //hash search and delete
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "r+b");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -521,11 +632,15 @@ void KS2_2_delete_wtable(int key2){ //hash search and delete
 		ind2 = (hash1(key2) + i * hash2(key2, table.msize)) % table.msize;
 		if(ks2[ind2].busy && ks2[ind2].key == key2){
 			Item item = read_item2(file, ks2, ind2);
-			item.del = 1;
-			fseek(file, -sizeof(Item), SEEK_CUR);
-			fwrite(&item, sizeof(Item), 1, file);
+			ind1 = item.ind1;
+			free_item(item, &table, &ks1, &ks2, file, ind1, ind2);
+			break;
 		}
 	}
+	rewind(file);
+	fwrite(&table, sizeof(Table), 1, file);
+	fwrite(ks1, sizeof(KeySpace1), table.msize, file);
+    fwrite(ks2, sizeof(KeySpace2), table.msize, file);
 	free_RAM(ks1, ks2, file);
 }
 
@@ -535,6 +650,13 @@ InfoS* search_releases_wtable(char key1[N], int rel){ //bin search  and delete
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "rb");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return NULL;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -572,6 +694,13 @@ void delete_releases_wtable(char key1[N], int rel){ //bin search  and delete
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "r+b");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -580,7 +709,7 @@ void delete_releases_wtable(char key1[N], int rel){ //bin search  and delete
 		return;
 	}
 
-	int ind1;
+	int ind1, ind2;
 
 	ind1 = bin_search(table, ks1, key1);
 
@@ -591,12 +720,16 @@ void delete_releases_wtable(char key1[N], int rel){ //bin search  and delete
 
 	for(;ind1 < table.csize && !strcmp(ks1[ind1].key, key1); ind1++){
 		Item item = read_item1(file, ks1, ind1);
-		if(ks1[ind1].release == rel && !item.del){
-			item.del = 1;
-			fseek(file, -sizeof(Item), SEEK_CUR);
-			fwrite(&item, sizeof(Item), 1, file);			
+		if(ks1[ind1].release == rel){
+			ind2 = item.ind2;
+			free_item(item, &table, &ks1, &ks2, file, ind1, ind2);
+			break;			
 		}
 	}
+	rewind(file);
+	fwrite(&table, sizeof(Table), 1, file);
+	fwrite(ks1, sizeof(KeySpace1), table.msize, file);
+    fwrite(ks2, sizeof(KeySpace2), table.msize, file);
 
 	free_RAM(ks1, ks2, file);
 }
@@ -607,37 +740,57 @@ void show_wtable(){
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "rb");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
     Item item;
     char* string;
+    for(int i = 0; i < 60; i++){
+		printf("-");
+	}
+	printf("\n");
     for(int i = 0; i < table.csize; i++){
     	rewind(file);
     	fseek(file, ks1[i].pos, SEEK_CUR);
     	fread(&item, sizeof(Item), 1, file);
-    	if(item.del) continue;
     	string = (char*)malloc(item.info.len + 1);
     	fread(string, sizeof(char), item.info.len, file);
     	string[item.info.len] = '\0';
     	printf("x: %d y: %d s: %s key1: %s rel: %d key2: %d\n", item.info.x, item.info.y, string, ks1[item.ind1].key, ks1[item.ind1].release, ks2[item.ind2].key);
     	free(string);
+    	for(int i = 0; i < 60; i++){
+			printf("-");
+		}
+		printf("\n");
     }
-    //system("hexdump -C table.bin");
     free_RAM(ks1, ks2, file);
 }
 
-void clear_table(){
+void clear_wtable(){
 	FILE* file = fopen("table.bin", "wb");
 	fclose(file);
 }
 
-void garbage_collector(){
+void garbage_collector_wtable(){
 	Table table;
 	KeySpace1* ks1;
 	KeySpace2* ks2;
 
 	FILE* file = fopen("table.bin", "r+b");
+	fseek(file, 0, SEEK_END);
+	if(!ftell(file)){
+		printf("File is empty\n");
+		return;
+	}else{
+		rewind(file);
+	}
 
 	read_table(&table, &ks1, &ks2, file);
 
@@ -655,20 +808,20 @@ void garbage_collector(){
 	Item item;
 	while(position < end){
 		memcpy(&item, payload + position - start, sizeof(Item));
-		//printf("%s %d %ld\n", ks1[item.ind1].key, ks2[item.ind2].key, ks1[item.ind1].pos);
+		
+		//printf("1 %s %d\n", ks1[item.ind1].key,ks2[item.ind2].key );
 		if(!item.del){
 			ks1[item.ind1].pos = position;
 			ks2[item.ind2].pos = position;
-			printf("%s %d %ld\n", ks1[item.ind1].key, ks2[item.ind2].key, ks1[item.ind1].pos);
 			position += sizeof(Item) + item.info.len;
 		}
 		else{
 			memmove(payload + position - start, payload + position + sizeof(Item) + item.info.len - start, end - (position + sizeof(Item) + item.info.len));
 			end -= sizeof(Item) + item.info.len;
-			delta += sizeof(Item) + item.info.len;
-			table.csize;
 		}
+
 	}
+
 	rewind(file);
 	fseek(file, start, SEEK_CUR);
 	fwrite(payload, sizeof(char), end - start, file);
@@ -678,33 +831,44 @@ void garbage_collector(){
 	fwrite(ks1, sizeof(KeySpace1), table.msize, file);
     fwrite(ks2, sizeof(KeySpace2), table.msize, file);
 
+    rewind(file);
+    ftruncate(fileno(file), end);
+
 	free(payload);
 	free_RAM(ks1, ks2, file);
 }
 
-
+/*
 int main(int argc, char const *argv[])
 {
 	create_wtable(57);
 
-	insert_wtable("q", 1,2,3, "1wrrr");
+	InfoS infoss;
+	infoss.info.x = 101;
+	infoss.info.y = 3;
+	infoss.string = "qqqqqqqtyftytf";
 
-	insert_wtable("p", 4,5,6, "2wrrr");
 
-	insert_wtable("p", 7,5,6, "2wrrr");
+	insert_wtable("qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq", 1,infoss);
+	//insert_wtable("w", 9,101,4, "qwrrr");
 
-	insert_wtable("q", 2,9,10, "4wrrr");
+	//insert_wtable("p", 4,5,6, "2wrrr");
 
-	insert_wtable("p", 6,11,12, "5wrrr");
+	//insert_wtable("p", 7,0,0, "2wrrr");
+
+	//insert_wtable("p", 2,9,10, "4wrrr");
+
+	//insert_wtable("p", 6,11,12, "qwrrr");
+	//insert_wtable("z", 8,100,3, "zwrrr");
 	InfoS* infos = KS2_2_search_wtable(6);
 	if(infos){ 
 		//printf("%d %d %s\n", infos->info.x, infos->info.y, infos->string );
 		free(infos->string);
 		free(infos);
 	}
-	KS2_1_delete_wtable("p", 4);
+	KS1_2_delete_wtable("p");
 
-	//garbage_collector();
+	garbage_collector_wtable();
 
 	InfoSR* infosr = KS1_2_search_wtable("pppp");
 	if(infosr){
@@ -730,3 +894,4 @@ int main(int argc, char const *argv[])
 
 	return 0;
 }
+*/

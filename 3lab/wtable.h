@@ -44,4 +44,35 @@ typedef struct {
 	int msize;
 }Table;
 
+void create_wtable(int msize);
+
+int insert_wtable(char key1[N], int key2, InfoS infos);
+
+InfoS* KS1_1_search_wtable(char key1[N], int key2);
+
+void KS1_1_delete_wtable(char key1[N], int key2);
+
+InfoS* KS2_1_search_wtable(char* key1, int key2);
+
+void KS2_1_delete_wtable(char* key1, int key2);
+
+InfoSR* KS1_2_search_wtable(char key1[N]);
+
+void KS1_2_delete_wtable(char key1[N]);
+
+InfoS* KS2_2_search_wtable(int key2);
+
+void KS2_2_delete_wtable(int key2);
+
+InfoS* search_releases_wtable(char key1[N], int rel);
+
+void delete_releases_wtable(char key1[N], int rel);
+
+void show_wtable();
+
+void clear_wtable();
+
+void garbage_collector_wtable();
+
+
 #endif

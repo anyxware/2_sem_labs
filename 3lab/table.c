@@ -168,7 +168,7 @@ void free_item(Table* table, int ind1, int ind2){
 	free(table->ks1[ind1].item);
 	free(table->ks1[ind1].key);
 	memmove(&(table->ks1[ind1]), &(table->ks1[ind1+1]), (table->csize - ind1 - 1) * sizeof(KeySpace1));
-	for(int i = ind1; i < table->csize - ind1 - 1; i ++){
+	for(int i = ind1; i < table->csize /*- ind1*/ - 1; i ++){
 		table->ks1[i].item->ind1--;
 	}
 	table->csize--;
@@ -221,7 +221,7 @@ InfoR* copy_infor(Table* table, int ind1, int ind0, char* key1, int count){
 const Info* KS1_1_search_table(Table* table, char* key1, int key2){ //bin search  and delete
 	if(!table->csize) return NULL;
 	int ind1, ind2;
-	
+
 	ind1 = bin_search(table, key1);
 	if(ind1 == -1) return NULL;
 
