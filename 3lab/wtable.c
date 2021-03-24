@@ -190,14 +190,15 @@ int insert_wtable(char key1[N], int key2, int x, int y, char* string){
 	fwrite(&item, sizeof(Item), 1, file);
 	long int pos = ftell(file) - sizeof(Item);
 	fwrite(string, sizeof(char), strlen(string), file);
-	fclose(file);
+	//fclose(file);
 	
 	ks1[ind1].pos = pos;
 	ks2[ind2].pos = pos;
 	table.csize++;
 	
 
-	file = fopen("table.bin", "r+b");
+	//file = fopen("table.bin", "r+b");
+	rewind(file);
 	fwrite(&table, sizeof(Table), 1, file);
 	fwrite(ks1, sizeof(KeySpace1), table.msize, file);
     fwrite(ks2, sizeof(KeySpace2), table.msize, file);
@@ -641,16 +642,41 @@ void garbage_collector(){
 	read_table(&table, &ks1, &ks2, file);
 
 	long int start = ftell(file);
+	long int position = start;
 	fseek(file, 0, SEEK_END);
 	long int end = ftell(file);
+
+	long int delta = 0;
 
 	char* payload = (char*)malloc(end - start);
 	fseek(file, start - end, SEEK_CUR);
 	fread(payload, sizeof(char), end - start, file);
 
 	Item item;
-	memcpy(&item, payload, sizeof(Item));
-	printf("%d\n", item.info.x);
+	while(position < end){
+		memcpy(&item, payload + position - start, sizeof(Item));
+		//printf("%s %d %ld\n", ks1[item.ind1].key, ks2[item.ind2].key, ks1[item.ind1].pos);
+		if(!item.del){
+			ks1[item.ind1].pos = position;
+			ks2[item.ind2].pos = position;
+			printf("%s %d %ld\n", ks1[item.ind1].key, ks2[item.ind2].key, ks1[item.ind1].pos);
+			position += sizeof(Item) + item.info.len;
+		}
+		else{
+			memmove(payload + position - start, payload + position + sizeof(Item) + item.info.len - start, end - (position + sizeof(Item) + item.info.len));
+			end -= sizeof(Item) + item.info.len;
+			delta += sizeof(Item) + item.info.len;
+			table.csize;
+		}
+	}
+	rewind(file);
+	fseek(file, start, SEEK_CUR);
+	fwrite(payload, sizeof(char), end - start, file);
+
+	rewind(file);
+	fwrite(&table, sizeof(Table), 1, file);
+	fwrite(ks1, sizeof(KeySpace1), table.msize, file);
+    fwrite(ks2, sizeof(KeySpace2), table.msize, file);
 
 	free(payload);
 	free_RAM(ks1, ks2, file);
@@ -661,29 +687,29 @@ int main(int argc, char const *argv[])
 {
 	create_wtable(57);
 
-	insert_wtable("qqqq", 1,2,3, "1wrrr");
+	insert_wtable("q", 1,2,3, "1wrrr");
 
-	insert_wtable("pppp", 4,5,6, "2wrrr");
+	insert_wtable("p", 4,5,6, "2wrrr");
 
-	insert_wtable("pppp", 7,5,6, "2wrrr");
+	insert_wtable("p", 7,5,6, "2wrrr");
 
-	insert_wtable("pppppppppp", 5,7,8, "3wrrr");
+	insert_wtable("q", 2,9,10, "4wrrr");
 
-	insert_wtable("qqqq", 2,9,10, "4wrrr");
-
-	insert_wtable("pppp", 6,11,12, "5wrrr");
+	insert_wtable("p", 6,11,12, "5wrrr");
 	InfoS* infos = KS2_2_search_wtable(6);
 	if(infos){ 
-		printf("%d %d %s\n", infos->info.x, infos->info.y, infos->string );
+		//printf("%d %d %s\n", infos->info.x, infos->info.y, infos->string );
 		free(infos->string);
 		free(infos);
 	}
-	//KS2_1_delete_wtable("qqqq", 1);
+	KS2_1_delete_wtable("p", 4);
+
+	//garbage_collector();
 
 	InfoSR* infosr = KS1_2_search_wtable("pppp");
 	if(infosr){
 		for(int i = 0 ;infosr[i].string; i++){
-			printf("%d %d %d %s\n", infosr[i].release, infosr[i].info.x, infosr[i].info.y, infosr[i].string);
+			//printf("%d %d %d %s\n", infosr[i].release, infosr[i].info.x, infosr[i].info.y, infosr[i].string);
 			free(infosr[i].string);
 		}
 	}
@@ -691,7 +717,7 @@ int main(int argc, char const *argv[])
 
 	infos = search_releases_wtable("pppp", 0);
 	if(infos){ 
-		printf("%d %d %s\n", infos->info.x, infos->info.y, infos->string );
+		//printf("%d %d %s\n", infos->info.x, infos->info.y, infos->string );
 		free(infos->string);
 		free(infos);
 	}
@@ -700,7 +726,6 @@ int main(int argc, char const *argv[])
 
 	show_wtable();
 
-	garbage_collector();
 
 
 	return 0;
