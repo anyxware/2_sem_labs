@@ -1,169 +1,122 @@
-#include "table.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "lab6.c"
+#include "table.h"
+#include "task.h"
 
-char* get_str(){
-	char buf[80] = {0};
-	char* res = NULL;
-	int len = 0;
-	int n = 0;
-	do{
-		n = scanf("%80[^\n]",buf);
-		if(n < 0){
-			if(!res) return NULL;	
-		} else if(n > 0){
-			int chunk_len = strlen(buf);
-			int str_len = len + chunk_len;
-			res = realloc(res,str_len + 1);
-			memcpy(res + len, buf, chunk_len);
-			len = str_len;
-		} else{
-			scanf("%*c");
-		}
-	}while(n > 0);
-
-	if(len > 0) res[len] = '\0';
-	else res = calloc(1,sizeof(char));
-	return res;
-}
-
-int isPrime(int n){
-    if (n > 1){
-        for (int i = 2; i < n; i++)
-            if (n % i == 0)
-                return 0;
-        return 1;
-    }else
-        return 0;
-}
-
-void error(){
-	printf("\033[1;31mWrong answer!\033[0m\n");
-}
-
-void flush(){
-	char c;
-	while((c = getchar()) != '\n'){}
-}
-
-int read_answer(int bord){
-	int ok;
-	int answ;
-	printf("Input answer: ");
-	ok = scanf("%d", &answ);
-	if(ok < 0) return 0;
-	while(!ok || answ < 1 || answ > bord){
-		flush();
-		error();
-		printf("Input answer: ");
-		ok = scanf("%d", &answ);
-		if(ok < 0) return 0;
-	}
-	flush();
-	printf("\n");
-	return answ;
-}
-
-int read_msize(){
-	int ok;
-	int answ;
-	printf("Input msize(prime number): ");
-	ok = scanf("%d", &answ);
-	while(!ok || !isPrime(answ)){
-		flush();
-		error();
-		printf("Input msize(prime number): ");
-		ok = scanf("%d", &answ);
-	}
-	flush();
-	printf("\n");
-	return answ;
-}
-
-int read_int(char* s){
-	int ok;
-	int answ;
-	printf("Input %s: ", s);
-	ok = scanf("%d", &answ);
-	while(!ok){
-		flush();
-		error();
-		printf("Input %s: ", s);
-		ok = scanf("%d", &answ);
-	}
-	flush();
-	printf("\n");
-	return answ;
-}
-
-char* read_str(char* s){
-	char* str;
-	printf("\033[1;32mInput %s: \033[0m", s);
-	str = get_str(); printf("\n");
-	while(!strlen(str)){
-		error();
-		printf("\033[1;32mInput %s: \033[0m",s);
-		free(str);
-		str = get_str();
-		printf("\n");
-	}
-	return str;
-}
-
-void D_Create(Table** table){
+int D_Create(Table** table){
 	if(*table){
 		printf("\033[1;31mTable has already created\033[0m\n");
-		return;
+		return 0;
 	}
 	int msize = read_msize();
+	if(msize < 0) return -1;
 	*table = create_table(msize);
 	printf("Table was created with size %d\n", msize);
+	return 0;
 }
 
-void D_Insert(Table** table){
+int D_Insert(Table** table){
 	char* key1;
+	int* check;
 	int key2;
 	Info info;
 	int status;
 
 	if(!*table){
 		printf("\033[1;31mNo table\033[0m\n");
-		return;
+		return 0;
 	}
 	key1 = read_str("key1");
-	key2 = read_int("\033[1;33mkey2\033[0m");
-	info.x = read_int("\033[1;34mx\033[0m");
-	info.y = read_int("\033[1;35my\033[0m");
+
+	if(!key1)
+		return -1;
+
+	check = read_int("\033[1;33mkey2\033[0m");
+
+	if(check){
+		key2 = *check;
+		free(check);
+	}
+	else{
+		free(key1);
+		return -1;
+	}
+
+	check = read_int("\033[1;34mx\033[0m");
+
+	if(check){
+		info.x = *check;
+		free(check);
+	}
+	else{
+		free(key1);
+		return -1;
+	}
+
+	check = read_int("\033[1;35my\033[0m");
+
+	if(check){
+		info.y = *check;
+		free(check);
+	}
+	else{
+		free(key1);
+		return -1;
+	}
+
 	info.string = read_str("string");
+
+	if(!info.string){
+		free(key1);
+		return -1;
+	}
 
 	status = insert_table(*table, key1, key2, info);
 	if(status < 0) printf("\033[1;31mDidn't insert\033[0m\n");
 	free(key1);
 	free(info.string);
+	return 0;
 }
 
-void D_Find(Table** table){
+int D_Find(Table** table){
 	char* key1;
+	int* check;
 	int key2;
 	int status, rel;
 
 	if(!*table){
 		printf("\033[1;31mNo table\033[0m\n");
-		return;
+		return 0;
 	}	
 	
 	printf("1.Use two keys\n");
 	printf("2.Use one key\n");
 	printf("3.Use first key and key's release\n");
 	status = read_answer(3);
+	if(!status) return -1;
 	if(status == 1){
 		printf("1.Use binary search\n");
 		printf("2.Use hash search\n");
 		status = read_answer(2);
+		if(!status) return -1;
 		key1 = read_str("key1");
-		key2 = read_int("key2");
+
+		if(!key1)
+			return -1;
+
+		check = read_int("key2");
+
+		if(check){
+			key2 = *check;
+			free(check);
+		}
+		else{
+			free(key1);
+			return -1;
+		}
+
 		if(status == 1){
 			const Info* info = KS1_1_search_table(*table, key1, key2);
 			if(info){
@@ -188,8 +141,13 @@ void D_Find(Table** table){
 		printf("1.Use first keys\n");
 		printf("2.Use second key\n");
 		status = read_answer(2);
+		if(!status) return -1;
 		if(status == 1){
 			key1 = read_str("key1");
+
+			if(!key1)
+				return -1;
+
 			InfoR* infor = KS1_2_search_table(*table, key1);
 			if(infor){
 				for(int i = 0 ;infor[i].info.string; i++){
@@ -203,7 +161,16 @@ void D_Find(Table** table){
 			free(key1);
 		}
 		else if(status == 2){
-			key2 = read_int("key2");
+			check = read_int("key2");
+
+			if(check){
+				key2 = *check;
+				free(check);
+			}
+			else{
+				return -1;
+			}
+
 			const Info* info = KS2_2_search_table(*table, key2);
 			if(info){
 				printf("%d %d %s\n", info->x, info->y, info->string);
@@ -215,7 +182,21 @@ void D_Find(Table** table){
 	}
 	else if(status == 3){
 		key1 = read_str("key1");
-		rel = read_int("release");
+
+		if(!key1)
+			return -1;
+
+		check = read_int("release");
+
+		if(check){
+			rel = *check;
+			free(check);
+		}
+		else{
+			free(key1);
+			return -1;
+		}
+
 		const Info* info = search_releases_table(*table, key1, rel);
 		if(info){
 			printf("%d %d %s\n", info->x, info->y, info->string);
@@ -225,27 +206,45 @@ void D_Find(Table** table){
 		}
 		free(key1);
 	}
+	return 0;
 }
 
-void D_Delete(Table** table){
+int D_Delete(Table** table){
 	char* key1;
+	int* check;
 	int key2;
 	int status, rel;
 
 	if(!*table){
 		printf("\033[1;31mNo table\033[0m\n");
-		return;
+		return 0;
 	}
 	printf("1.Use two keys\n");
 	printf("2.Use one key\n");
 	printf("3.Use first key and key's release\n");
 	status = read_answer(3);
+	if(!status) return -1;
 	if(status == 1){
 		printf("1.Use binary search\n");
 		printf("2.Use hash search\n");
 		status = read_answer(2);
+		if(!status) return -1;
 		key1 = read_str("key1");
-		key2 = read_int("key2");
+
+		if(!key1)
+			return -1;
+
+		check = read_int("key2");
+
+		if(check){
+			key2 = *check;
+			free(check);
+		}
+		else{
+			free(key1);
+			return -1;
+		}
+
 		if(status == 1){
 			KS1_1_delete_table(*table, key1, key2);
 		}
@@ -258,43 +257,75 @@ void D_Delete(Table** table){
 		printf("1.Use first keys\n");
 		printf("2.Use second key\n");
 		status = read_answer(2);
+		if(!status) return -1;
 		if(status == 1){
 			key1 = read_str("key1");
+
+			if(!key1)
+				return -1;
+
 			KS1_2_delete_table(*table, key1);
 			free(key1);
 		}
 		else if(status == 2){
-			key2 = read_int("key2");
+			check = read_int("key2");
+
+			if(check){
+				key2 = *check;
+				free(check);
+			}
+			else{
+				return -1;
+			}
+
 			KS2_2_delete_table(*table, key2);
 		}
 	}
 	else if(status == 3){
 		key1 = read_str("key1");
-		rel = read_int("release");
+
+		if(!key1)
+			return -1;
+
+		check = read_int("release");
+
+		if(check){
+			rel = *check;
+			free(check);
+		}
+		else{
+			free(key1);
+			return -1;
+		}
+
 		delete_releases_table(*table, key1, rel);
 		free(key1);
 	}
+	return 0;
 }
 
-void D_Show(Table** table){
+int D_Show(Table** table){
 	if(!*table){
 		printf("\033[1;31mNo table\033[0m\n");
-		return;
+		return 0;
 	}
 	show_table(*table);
+	return 0;
 }
 
-void D_Clear(Table** table){
+int D_Clear(Table** table){
 	if(!*table){
 		printf("\033[1;31mNo table\033[0m\n");
-		return;
+		return 0;
 	}
 	clear_table(*table);
 	*table = NULL;
+	return 0;
 }
 
-void D_Game(Table** table){
+int D_Game(Table** table){
 	game();
+	return 0;
 }
 
 void deleteTable(Table** table){
@@ -320,12 +351,15 @@ int main(int argc, char const *argv[])
 	Table *table = NULL;
 
 	int answ;
+	int done;
 
-	void (*funcs[8])(Table** table) = {NULL, &D_Create, &D_Insert, &D_Find, &D_Delete, &D_Show, &D_Clear, &D_Game};
+	int (*funcs[8])(Table** table) = {NULL, &D_Create, &D_Insert, &D_Find, &D_Delete, &D_Show, &D_Clear, &D_Game};
 
 	while(answ = dialogue()){
 		if(funcs[answ]){
-			funcs[answ](&table);
+			done = funcs[answ](&table);//funcs[answ](&table);
+			if(done < 0)
+				break;
 		}
 	}
 

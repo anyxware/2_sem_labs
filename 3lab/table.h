@@ -21,12 +21,14 @@ typedef struct {
 typedef struct {
 	char* key;
 	int release;
+	int last_release;
 	Item *item;
 }KeySpace1;
 
 typedef struct {
 	int busy;
 	int key;
+	int dead;
 	Item *item;
 }KeySpace2;
 

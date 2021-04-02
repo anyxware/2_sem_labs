@@ -58,6 +58,7 @@ void add_key1(Table* table, int j,const char* key1, int rel){
 	table->ks1[j].key = (char*)malloc(strlen(key1)+1);
 	strcpy(table->ks1[j].key, key1);
 	table->ks1[j].release = rel;
+	table->ks1[j].last_release = rel;
 }
 
 Table* create_table(int msize){
@@ -99,19 +100,23 @@ int insert_table(Table* table,const char* key1, int key2, Info info){
 		}else{
 			while(!strcmp(table->ks1[j].key, key1)){
 				if(!(j + 1 < table->csize)){
-					rel = table->ks1[j].release;
-					j++;
+					rel = table->ks1[j++].last_release;
+					//j++;
 					break;
 				}
-				rel = table->ks1[j++].release;
+				rel = table->ks1[j++].last_release;
 			}
 			add_key1(table, j, key1, rel + 1);
+			for(int i = 0; i < j; i++){
+				table->ks1[i].last_release++;
+			}
 			ind1 = j;
 		}
 	}else{
 		table->ks1[0].key = (char*)malloc(strlen(key1)+1);
 		strcpy(table->ks1[0].key, key1);
 		table->ks1[0].release = 0;
+		table->ks1[0].last_release = 0;
 		ind1 = 0;
 	}
 
@@ -371,6 +376,10 @@ const Info* KS2_2_search_table(Table* table, int key2){ // return one structure
 	return NULL;
 }
 
+//1
+//
+//
+
 Info* KS2_2_copy_search_table(Table* table, int key2){ // return one structure
 	if(!table->csize) return NULL;
 	int ind1, ind2;
@@ -441,32 +450,6 @@ void delete_releases_table(Table* table, char* key1, int rel){ // delete certain
 //-----------------------------remove and print---------------------------------------------------------
 
 void show_table(Table* table){
-	/*
-	int max_string = 0, max_key1 = 0;
-	for(int i = 0; i < table->csize; i++){
-		if(strlen(table->ks1[i].item->info.string) > max_string) max_string = strlen(table->ks1[i].item->info.string);
-		if(strlen(table->ks1[i].key) > max_key1) max_key1 = strlen(table->ks1[i].key);
-	}
-	printf("|     |  x  |  y  |");
-	for(int i = 0; i < (max_string - 6) / 2; i++){
-		printf(" ");
-	}
-	printf(" string ");
-	for(int i = 0; i < (max_string - 6) / 2; i++){
-		printf(" ");
-	}
-	printf("|");
-	for(int i = 0; i < (max_key1 - 4) / 2; i++){
-		printf(" ");
-	}
-	printf(" key1 ");
-	for(int i = 0; i < (max_key1 - 4) / 2; i++){
-		printf(" ");
-	}
-	printf("| rel | key2 |");
-	printf("\n");
-	*/
-
 	for(int i = 0; i < 60; i++){
 		printf("-");
 	}
@@ -475,7 +458,7 @@ void show_table(Table* table){
 		printf("| %d |", i);
 		printf(" Info | %d | %d | %s |", table->ks1[i].item->info.x, table->ks1[i].item->info.y, table->ks1[i].item->info.string);
 		printf(" Key1 | %s |", table->ks1[i].key);
-		printf(" %d |", table->ks1[i].release);
+		printf(" %d %d |", table->ks1[i].release, table->ks1[i].last_release);
 		int ind2 = table->ks1[i].item->ind2;
 		printf(" Key2 | %d |\n", table->ks2[ind2].key);	
 		for(int i = 0; i < 60; i++){
