@@ -75,6 +75,7 @@ int insert_table(Table* table,const char* key1, int key2, Info info){
 	if(table->csize){
 		for(int i = 0; i < table->msize; i++){
 			if(table->ks2[i].busy && key2 == table->ks2[i].key) return -1; //check 2-ond place
+			else if(!table->ks2[i].dead) break;
 		}
 	}
 	int ind1 = 0, ind2 = 0;
@@ -125,6 +126,7 @@ int insert_table(Table* table,const char* key1, int key2, Info info){
 		int index = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
 		if(!(table->ks2[index].busy)){
 			table->ks2[index].busy = 1;
+			table->ks2[index].dead = 1;
 			table->ks2[index].key = key2;
 			ind2 = index;
 			break;
@@ -279,6 +281,8 @@ const Info* KS2_1_search_table(Table* table, char* key1, int key2){ //hash searc
 			ind1 = table->ks2[ind2].item->ind1;
 			if(!strcmp(table->ks1[ind1].key, key1))
 				return (const Info*)&(table->ks2[ind2].item->info);
+		}else if(!table->ks2[ind2].dead){
+			break;
 		}
 	}
 	return NULL;
@@ -295,6 +299,8 @@ Info* KS2_1_copy_search_table(Table* table, char* key1, int key2){ //hash search
 			if(!strcmp(table->ks1[ind1].key, key1)){
 				return copy_info(table, ind2, 2);
 			}
+		}else if(!table->ks2[ind2].dead){
+			break;
 		}
 	}
 	return NULL;
@@ -311,6 +317,8 @@ void KS2_1_delete_table(Table* table, char* key1, int key2){ //hash search and d
 			if(!strcmp(table->ks1[ind1].key, key1))
 				free_item(table, ind1, ind2);
 				break;
+		}else if(!table->ks2[ind2].dead){
+			break;
 		}
 	}
 }
@@ -371,6 +379,8 @@ const Info* KS2_2_search_table(Table* table, int key2){ // return one structure
 		ind2 = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
 		if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
 			return (const Info*)&(table->ks2[ind2].item->info);
+		}else if(!table->ks2[ind2].dead){
+			break;
 		}
 	}
 	return NULL;
@@ -388,6 +398,8 @@ Info* KS2_2_copy_search_table(Table* table, int key2){ // return one structure
 		ind2 = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
 		if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
 			return copy_info(table, ind2, 2);
+		}else if(!table->ks2[ind2].dead){
+			break;
 		}
 	}
 	return NULL;
@@ -402,6 +414,8 @@ void KS2_2_delete_table(Table* table, int key2){ // return one structure
 		if(table->ks2[ind2].busy && table->ks2[ind2].key == key2){
 			ind1 = table->ks2[ind2].item->ind1;
 			free_item(table, ind1, ind2);
+			break;
+		}else if(!table->ks2[ind2].dead){
 			break;
 		}
 	}
