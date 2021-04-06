@@ -135,7 +135,6 @@ int insert_wtable(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file, ch
 			while(!strcmp((*ks1)[j].key, key1)){
 				if(!(j + 1 < table->csize)){
 					rel = (*ks1)[j++].last_release;
-					//j++;
 					break;
 				}
 				rel = (*ks1)[j++].last_release;
@@ -163,11 +162,7 @@ int insert_wtable(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file, ch
 			break;
 		}
 	}
-	/*
-	fclose(file);
-
-	file = fopen("table.bin", "ab");*/
-	fseek(file, 0, SEEK_END);/**/
+	fseek(file, 0, SEEK_END);
 	printf("test\n");
 
 	Item item;
@@ -179,22 +174,16 @@ int insert_wtable(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file, ch
 	item.info.len = strlen(infos.string);
 	fwrite(&item, sizeof(Item), 1, file);
 	long int pos = ftell(file) - sizeof(Item);
-	printf("%s\n", infos.string);
 	fwrite(infos.string, sizeof(char), strlen(infos.string), file);
-	//fwrite("qreyqwreqr", sizeof(char), 10, file);
-	//fclose(file);
 	
 	(*ks1)[ind1].pos = pos;
 	(*ks2)[ind2].pos = pos;
 	table->csize++;
 
 	return 0;
-	
-
-	//file = fopen("table.bin", "r+b");
 }
 
-int bin_search(Table* table, KeySpace1** ks1, char* key1){
+int bin_search(Table* table, KeySpace1** ks1, char key1[N]){
 	int left = 0, right = table->csize - 1;
 	int ind1, status = 1;
 	while(left <= right && status){
@@ -273,7 +262,7 @@ InfoS* KS1_1_search_wtable(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE*
 	for(;ind1 < table->csize && !strcmp((*ks1)[ind1].key, key1); ind1++){
 		Item item = read_item1(file, ks1, ind1);
 		ind2 = item.ind2;
-		if((*ks2)[ind2].key == key2 && !item.del){
+		if((*ks2)[ind2].key == key2){
 			InfoS* infos = read_infos(item, file);
 			return infos;
 		}
@@ -340,7 +329,7 @@ void KS1_1_delete_wtable(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* f
 	for(;ind1 < table->csize && !strcmp((*ks1)[ind1].key, key1); ind1++){
 		Item item = read_item1(file, ks1, ind1);
 		ind2 = item.ind2;
-		if((*ks2)[ind2].key == key2 && !item.del){
+		if((*ks2)[ind2].key == key2){
 			free_item(item, table, ks1, ks2, file, ind1, ind2);
 			break;
 		}
@@ -498,7 +487,7 @@ InfoS* search_releases_wtable(Table* table, KeySpace1** ks1, KeySpace2** ks2, FI
 
 	for(;ind1 < table->csize && !strcmp((*ks1)[ind1].key, key1); ind1++){
 		Item item = read_item1(file, ks1, ind1);
-		if((*ks1)[ind1].release == rel && !item.del){
+		if((*ks1)[ind1].release == rel){
 			InfoS* infos = read_infos(item, file);
 			return infos;
 		}

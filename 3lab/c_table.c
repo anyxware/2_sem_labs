@@ -1,4 +1,4 @@
-#include "table.h"
+#include "c_table.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -51,90 +51,182 @@ unsigned int hash2(int key, int msize){
 
 //----------------------------init, create, insert------------------------------------------------------------
 
-void add_key1(Table* table, int j,const char* key1, int rel){
-	memmove(&(table->ks1[j+1]), &(table->ks1[j]), (table->csize - j) * sizeof(KeySpace1));
-	for(int i = 0; i < table->csize - j; i++)
-		table->ks1[j+i+1].item->ind1 += 1;
-	table->ks1[j].key = (char*)malloc(strlen(key1)+1);
-	strcpy(table->ks1[j].key, key1);
-	table->ks1[j].release = rel;
-	table->ks1[j].last_release = rel;
-}
 
-Table* create_table(int msize){
-	Table* table = calloc(1, sizeof(Table));
-	table->msize = msize;
+void create_table(FILE* file, Table* table, int msize){
 	table->csize = 0;
-	table->ks1 = (KeySpace1*)malloc(msize * sizeof(KeySpace1));
-	table->ks2 = (KeySpace2*)calloc(1, msize * sizeof(KeySpace2));
-	return table;
+	table->msize = msize;
+	KeySpace1* ks1 = (KeySpace1*)malloc(msize * sizeof(KeySpace1));
+	KeySpace2* ks2 = (KeySpace2*)calloc(1, msize * sizeof(KeySpace2));
+
+	rewind(file);
+	fwrite(table, sizeof(Table), 1, file);
+	fwrite(ks1, sizeof(KeySpace1), msize, file);
+	fwrite(ks2, sizeof(KeySpace2), msize, file);
 }
 
-int insert_table(Table* table,const char* key1, int key2, Info info){
+void add_key1(FILE* file, Table* table, int j, const char* key1, int rel){
+	fseek(file, sizeof(Table) + j * sizeof(KeySpace1), SEEK_SET);
+	KeySpace1* move = (KeySpace1*)malloc((table->csize - j) * sizeof(KeySpace1));
+	fread(move, sizeof(KeySpace1), table->csize - j, file);
+	fseek(file, (j - table->csize + 1) * sizeof(KeySpace1), SEEK_CUR);
+	fwrite(move, sizeof(KeySpace1), table->csize - j, file);
+	free(move);
+	//memmove(&(table->ks1[j+1]), &(table->ks1[j]), (table->csize - j) * sizeof(KeySpace1));
+
+	for(int i = 0; i < table->csize - j; i++){
+		fseek(file, sizeof(Table) + (j + i + 1) * sizeof(KeySpace1), SEEK_SET);
+		KeySpace1 ks1_j_i_1;
+		fread(&ks1_j_i_1, sizeof(KeySpace1), 1, file);
+
+		long int pos = ks1_j_i_1.pos;
+		Item item;
+		fseek(file, pos, SEEK_SET);
+		fread(&item, sizeof(Item), 1, file);
+		item.ind1++;
+		fseek(file, -sizeof(Item), SEEK_CUR);
+		fwrite(&item, sizeof(Item), 1, file);
+
+		//table->ks1[j+i+1].item->ind1 += 1;
+	}
+	fseek(file, sizeof(Table) + j * sizeof(KeySpace1), SEEK_SET);
+	KeySpace1 ks1_j;
+	fread(&ks1_j, sizeof(KeySpace1), 1, file);
+	memcpy(ks1_j.key, key1, N);
+	ks1_j.release = rel;
+	ks1_j.last_release = rel;
+	fseek(file, -sizeof(KeySpace1), SEEK_CUR);
+	fwrite(&ks1_j, sizeof(KeySpace1), 1, file);
+
+
+	//table->ks1[j].key = (char*)malloc(strlen(key1)+1);
+	//strcpy(table->ks1[j].key, key1);
+	//table->ks1[j].release = rel;
+	//table->ks1[j].last_release = rel;
+}
+
+int insert_table(FILE* file, Table* table, const char key1[N], int key2, InfoS infos){
 	if(table->csize == table->msize) return -1;
 	if(table->csize){
 		for(int i = 0; i < table->msize; i++){
 			int index = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
-			if(table->ks2[index].busy && key2 == table->ks2[index].key) return -1; //check 2-ond place
-			else if(!table->ks2[index].dead) break;
+			fseek(file, sizeof(Table) + table->msize * sizeof(KeySpace1) + index * sizeof(KeySpace2), SEEK_SET);
+			KeySpace2 ks2_i;
+			fread(&ks2_i, sizeof(KeySpace2), 1, file);
+			if(ks2_i.busy && key2 == ks2_i.key) return -1; //check 2-ond place
+			else if(!ks2_i.dead) break;
 		}
 	}
 	int ind1 = 0, ind2 = 0;
-
 	//insert into the first table
-	if(table->csize){	
+	if(table->csize){
 		int left = 0, right = table->csize - 1;
 		int j, status = 1, rel = 0;
 		while(left <= right && status){
 			j = (left + right) / 2;
-			status = strcmp(table->ks1[j].key, key1);
+			fseek(file, sizeof(Table) + j * sizeof(KeySpace1), SEEK_SET);
+			KeySpace1 ks1_j;
+			fread(&ks1_j, sizeof(KeySpace1), 1, file);
+			status = strcmp(ks1_j.key, key1);
 			if(status < 0)
 				left = j + 1;
 			else
 				right = j - 1;
 		}
 		if(status < 0){
-			add_key1(table, j + 1, key1, 0);
+			add_key1(file, table, j + 1, key1, 0);
 			ind1 = j + 1;
 		}else if(status > 0){
-			add_key1(table, j, key1, 0);
+			add_key1(file, table, j, key1, 0);
 			ind1 = j;
 		}else{
-			while(!strcmp(table->ks1[j].key, key1)){
+			fseek(file, sizeof(Table) + j * sizeof(KeySpace1), SEEK_SET);
+			KeySpace1 ks1_j;
+			fread(&ks1_j, sizeof(KeySpace1), 1, file);
+			while(!strcmp(ks1_j.key, key1)){
 				if(!(j + 1 < table->csize)){
-					rel = table->ks1[j++].last_release;
-					//j++;
+					rel = ks1_j.last_release;
+					j++;
+					//rel = table->ks1[j++].last_release;
 					break;
 				}
-				rel = table->ks1[j++].last_release;
+				rel = ks1_j.last_release;
+				j++;
+				fread(&ks1_j, sizeof(KeySpace1), 1, file);
+				//rel = table->ks1[j++].last_release;
 			}
-			add_key1(table, j, key1, rel + 1);
+			add_key1(file, table, j, key1, rel + 1);
+			fseek(file, sizeof(Table), SEEK_SET);
 			for(int i = 0; i < j; i++){
-				table->ks1[i].last_release++;
+				KeySpace1 ks1_i;
+				fread(&ks1_i, sizeof(KeySpace1), 1, file);
+				ks1_i.last_release++;
+				fseek(file, -sizeof(KeySpace1), SEEK_CUR);
+				fwrite(&ks1_i, sizeof(KeySpace1), 1, file);
+				//table->ks1[i].last_release++;
 			}
 			ind1 = j;
 		}
 	}else{
-		table->ks1[0].key = (char*)malloc(strlen(key1)+1);
-		strcpy(table->ks1[0].key, key1);
-		table->ks1[0].release = 0;
-		table->ks1[0].last_release = 0;
+		fseek(file, sizeof(Table), SEEK_SET);
+		KeySpace1 ks1_0;
+		memcpy(ks1_0.key, key1, N);
+		ks1_0.release = 0;
+		ks1_0.last_release = 0;
 		ind1 = 0;
+		fwrite(&ks1_0, sizeof(KeySpace1), 1, file);
+		//table->ks1[0].key = (char*)malloc(strlen(key1)+1);
+		//strcpy(table->ks1[0].key, key1);
+		//table->ks1[0].release = 0;
+		//table->ks1[0].last_release = 0;
+		//ind1 = 0;
 	}
 
 	//insert into the second table
 	for(int i = 0; i < table->msize; i++){
 		int index = (hash1(key2) + i * hash2(key2, table->msize)) % table->msize;
-		if(!(table->ks2[index].busy)){
-			table->ks2[index].busy = 1;
-			table->ks2[index].dead = 1;
-			table->ks2[index].key = key2;
+		KeySpace2 ks2_index;
+		fseek(file, sizeof(Table) + table->msize * sizeof(KeySpace1) + index * sizeof(KeySpace2), SEEK_SET);
+		fread(&ks2_index, sizeof(KeySpace2), 1, file);
+		if(!(ks2_index.busy)){
+			ks2_index.busy = 1;
+			ks2_index.dead = 1;
+			ks2_index.key = key2;
 			ind2 = index;
+			fseek(file, -sizeof(KeySpace2), SEEK_CUR);
+			fwrite(&ks2_index, sizeof(KeySpace2), 1, file);
 			break;
 		}
 	}
 
 	//create the Item
+
+	Item item;
+	item.info.x = infos.info.x;
+	item.info.y = infos.info.y;
+	item.info.len = strlen(infos.string);
+	item.ind1 = ind1;
+	item.ind2 = ind2;
+	item.del = 0;
+
+	fseek(file, 0, SEEK_END);
+	fwrite(&item, sizeof(Item), 1, file);
+	long int pos = ftell(file) - sizeof(Item);
+	fwrite(infos.string, sizeof(char), strlen(infos.string), file);
+
+	KeySpace1 ks1_ind1;
+	fseek(file, sizeof(Table) + ind1 * sizeof(KeySpace1), SEEK_SET);
+	fread(&ks1_ind1, sizeof(KeySpace1), 1, file);
+	ks1_ind1.pos = pos;
+	fseek(file, -sizeof(KeySpace1), SEEK_CUR);
+	fwrite(&ks1_ind1, sizeof(KeySpace1), 1, file);
+
+	KeySpace2 ks2_ind2;
+	fseek(file, sizeof(Table) + table->msize * sizeof(KeySpace1) + ind2 * sizeof(KeySpace2), SEEK_SET);
+	fread(&ks2_ind2, sizeof(KeySpace2), 1, file);
+	ks2_ind2.pos = pos;
+	fseek(file, -sizeof(KeySpace2), SEEK_CUR);
+	fwrite(&ks2_ind2, sizeof(KeySpace2), 1, file);
+	/*
 	table->ks1[ind1].item = (Item*)malloc(sizeof(Item));
 	table->ks1[ind1].item->info.x = info.x;
 	table->ks1[ind1].item->info.y = info.y;
@@ -143,15 +235,192 @@ int insert_table(Table* table,const char* key1, int key2, Info info){
 	table->ks1[ind1].item->ind1 = ind1;
 	table->ks1[ind1].item->ind2 = ind2;
 	table->ks2[ind2].item = table->ks1[ind1].item;
-
+	*/
 	table->csize++;
+	fseek(file, 0, SEEK_SET);
+	fwrite(table, sizeof(Table), 1, file);
+	return 0;
+}
 
+void show_table(FILE* file, Table* table){
+	for(int i = 0; i < 60; i++){
+		printf("-");
+	}
+	printf("\n");
+	for(int i = 0; i < table->csize; i++){
+		printf("| %d |", i);
+		fseek(file, sizeof(Table) + i * sizeof(KeySpace1), SEEK_SET);
+		KeySpace1 ks1_i;
+		fread(&ks1_i, sizeof(KeySpace1), 1, file);
+		long int pos = ks1_i.pos;
+		fseek(file, pos, SEEK_SET);
+		Item item;
+		fread(&item, sizeof(Item), 1, file);
+		char* string = (char*)malloc(item.info.len + 1);
+		fread(string, sizeof(char), item.info.len, file);
+		string[item.info.len] = '\0';
+		printf(" Info | %d | %d | %s |", item.info.x, item.info.y, string);
+		printf(" Key1 | %s |", ks1_i.key);
+		printf(" %d %d |", ks1_i.release, ks1_i.last_release);
+		int ind2 = item.ind2;
+		fseek(file, sizeof(Table) + table->msize * sizeof(KeySpace1) + ind2 * sizeof(KeySpace2), SEEK_SET);\
+		KeySpace2 ks2_ind2;
+		fread(&ks2_ind2, sizeof(KeySpace2), 1, file);
+		printf(" Key2 | %d |\n", ks2_ind2.key);	
+		for(int i = 0; i < 60; i++){
+			printf("-");
+		}
+	printf("\n");
+	}
+}
+
+int bin_search(FILE* file, Table* table, char key1[N]){
+	int left = 0, right = table->csize - 1;
+	int ind1, status = 1;
+	KeySpace1 ks1_ind1;
+	while(left <= right && status){
+		ind1 = (left + right) / 2;
+		fseek(file, sizeof(Table) + ind1 * sizeof(KeySpace1), SEEK_SET);
+		fread(&ks1_ind1, sizeof(KeySpace1), 1, file);
+		status = strcmp(ks1_ind1.key, key1);
+		if(status < 0)
+			left = ind1 + 1;
+		else
+			right = ind1 - 1;
+	}
+	if(status != 0) return -1;
+
+	for(;ind1 >= 0; ind1--){
+		fseek(file, sizeof(Table) + ind1 * sizeof(KeySpace1), SEEK_SET);
+		fread(&ks1_ind1, sizeof(KeySpace1), 1, file);
+		if(strcmp(ks1_ind1.key, key1)){
+			break;
+		}
+	}
+	ind1++;
+	return ind1;
+}
+
+InfoS* KS1_1_search_table(FILE* file, Table* table, char key1[N], int key2){ //bin search  and delete
+
+	if(!table->csize){
+		return NULL;
+	}
+	int ind1, ind2;
+
+	ind1 = bin_search(file, table, key1);
+	if(ind1 == -1){
+		return NULL;
+	}
+
+	KeySpace1 ks1_ind1;
+	fseek(file, sizeof(Table) + ind1 * sizeof(KeySpace1), SEEK_SET);
+	fread(&ks1_ind1, sizeof(KeySpace1), 1, file);
+
+	for(;ind1 < table->csize && !strcmp(ks1_ind1.key, key1); ind1++){
+		Item item;
+		fseek(file, ks1_ind1.pos, SEEK_SET);
+		fread(&item, sizeof(Item), 1, file);
+		ind2 = item.ind2;
+		KeySpace2 ks2_ind2;
+		fseek(file, sizeof(Table) + table->msize * sizeof(KeySpace1) + ind2 * sizeof(KeySpace2), SEEK_SET);
+		fread(&ks2_ind2, sizeof(KeySpace2), 1, file);
+		//ind2 = table->ks1[ind1].item->ind2;
+		if(ks2_ind2.key == key2){
+			InfoS* infos = (InfoS*)malloc(sizeof(InfoS));
+			infos->info.x = item.info.x;
+			infos->info.y = item.info.y;
+			infos->info.len = item.info.len;
+			infos->string = (char*)malloc(item.info.len + 1);
+			fseek(file, ks1_ind1.pos + sizeof(Item), SEEK_SET);
+			fread(infos->string, sizeof(char), item.info.len, file);
+			infos->string[item.info.len] = '\0';
+			return infos;
+		}
+		fseek(file, sizeof(Table) + ind1 * sizeof(KeySpace1), SEEK_SET);
+		fread(&ks1_ind1, sizeof(KeySpace1), 1, file);
+	}
+	return NULL;
+}
+
+void KS1_1_delete_wtable(Table* table, FILE* file, char key1[N], int key2){ //bin search  and delete
+
+	if(!table->csize){
+		return;
+	}
+
+	int ind1, ind2;
+
+	ind1 = bin_search(file, table, key1);
+
+	if(ind1 == -1){
+		return;
+	}
+
+	KeySpace1 ks1_ind1;
+	fseek(file, sizeof(Table) + ind1 * sizeof(KeySpace1), SEEK_SET);
+	fread(&ks1_ind1, sizeof(KeySpace1), 1, file);	
+
+	for(;ind1 < table->csize && !strcmp(ks1_ind1.key, key1); ind1++){
+		Item item;
+		fseek(file, ks1_ind1.pos, SEEK_SET);
+		fread(&item, sizeof(Item), 1, file);
+		ind2 = item.ind2;
+		KeySpace2 ks2_ind2;
+		fseek(file, sizeof(Table) + table->msize * sizeof(KeySpace1) + ind2 * sizeof(KeySpace2), SEEK_SET);
+		fread(&ks2_ind2, sizeof(KeySpace2), 1, file);
+		//Item item = read_item1(file, ks1, ind1);
+		//ind2 = item.ind2;
+		if(ks2_ind2.key == key2){
+			item.del
+			//free_item(item, table, ks1, ks2, file, ind1, ind2);
+			break;
+		}
+		fseek(file, sizeof(Table) + ind1 * sizeof(KeySpace1), SEEK_SET);
+		fread(&ks1_ind1, sizeof(KeySpace1), 1, file);	
+	}
+}
+
+int main(int argc, char const *argv[])
+{
+	FILE* file = fopen("c_table.bin", "wb");
+	fclose(file);
+	file = fopen("c_table.bin", "r+b");
+
+	Table table;
+	rewind(file);
+	fread(&table, sizeof(Table), 1, file);
+
+	create_table(file, &table, 3);
+	InfoS infos;
+	infos.info.x = 3;
+	infos.info.y = 4;
+	infos.string = "qwewer";
+	insert_table(file, &table, "1", 2, infos);
+	infos.info.x = 6;
+	infos.info.y = 5;
+	infos.string = "22222";
+	insert_table(file, &table, "1", 3, infos);
+	infos.info.x = 2;
+	infos.info.y = 1;
+	infos.string = "3333333";
+	insert_table(file, &table, "2", 1, infos);
+	show_table(file, &table);
+
+	InfoS* infos1 = KS1_1_search_table(file, &table, "1", 3);
+	if(infos1){
+		printf("%d %d %s\n", infos1->info.x, infos1->info.y, infos1->string);
+		free(infos1);
+	}
+
+	fclose(file);
+	//system("xxd c_table.bin");
 	return 0;
 }
 
 //-----------------------------TWO KEYS(_1_), search and delete, used hash and bin search---------------------------------------------------------
 //returns const pointers
-
+/*
 
 int bin_search(Table* table, char* key1){
 	int left = 0, right = table->csize - 1;
@@ -176,7 +445,7 @@ void free_item(Table* table, int ind1, int ind2){
 	free(table->ks1[ind1].item);
 	free(table->ks1[ind1].key);
 	memmove(&(table->ks1[ind1]), &(table->ks1[ind1+1]), (table->csize - ind1 - 1) * sizeof(KeySpace1));
-	for(int i = ind1; i < table->csize /*- ind1*/ - 1; i ++){
+	for(int i = ind1; i < table->csize - 1; i ++){
 		table->ks1[i].item->ind1--;
 	}
 	table->csize--;
