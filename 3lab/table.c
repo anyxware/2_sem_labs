@@ -60,7 +60,7 @@ void add_key1(Table* table, int j,const char* key1, int rel){
 	table->ks1[j].release = rel;
 	table->ks1[j].last_release = rel;
 }
-
+  
 Table* create_table(int msize){
 	Table* table = calloc(1, sizeof(Table));
 	table->msize = msize;
