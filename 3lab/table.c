@@ -3,6 +3,58 @@
 #include <stdio.h>
 #include <string.h>
 
+#define INT
+
+#ifdef INT
+	typedef int Iterator;
+#else
+	typedef KeySpace1* Iterator;
+#endif
+
+
+Iterator begin(Table* table){
+	#ifdef INT
+		return 0;
+	#else
+		return &table->ks1[0];
+	#endif
+} 
+
+Iterator end(Table* table){
+	#ifdef INT
+		return table->csize;
+	#else
+		return table->ks1 + table->csize;
+	#endif
+}
+
+Iterator next(Iterator iterator){
+	return iterator + 1;
+}
+
+const Info* get_info(Table* table, Iterator iterator){
+	#ifdef INT
+		return (const Info*)&(table->ks1[iterator].item->info);
+	#else
+		return (const Info*)&(iterator->item->info);
+	#endif
+}
+
+void print_info(const Info* info){
+	if(info){
+		printf("%d %d %s\n", info->x, info->y, info->string);
+	}
+}
+
+void iterator_print_table(Table* table){
+	const Info* info;
+
+	for(Iterator i = begin(table); i < end(table); i = next(i)){
+		info = get_info(table, i);
+		print_info(info);
+	}
+}
+
 unsigned int hash1(int key){ //HashFAQ6
 	char* str = (char*)&key;
 
@@ -346,6 +398,34 @@ InfoR* KS1_2_search_table(Table* table, char* key1){ //return massive with struc
 	}
 	information[ind1 - ind0].info.string = NULL;
 	return information;
+}
+//typedef ... Iterator
+//Iterator first(Table*) //первый
+//Iterator last(Table*) // следующий после последнего
+//Iterator next(Iterator)
+//Info* get_by_iterator(Table*, Iterator)
+
+//1 <-first
+//3 <-next(first)
+//4
+//1
+//2
+//   <-last
+
+const Info* search_iterator_table(Table* table, char* key1){
+	static int iterartor = -1;
+	if(!table->csize) return NULL;
+	int ind1, ind2, ind0;
+	ind1 = bin_search(table, key1);
+	if(ind1 == -1) return NULL;
+
+	ind0 = ind1;
+	int count = 0;
+	for(;ind1 < table->csize && !strcmp(table->ks1[ind1].key, key1); ind1++){
+		count+=1;
+	}
+	iterartor++;
+	return (const Info*)&(table->ks1[ind0 + iterartor % count].item->info);	
 }
 
 InfoR* KS1_2_copy_search_table(Table* table, char* key1){ //return massive with structures with number of release and last struct is null-term structure

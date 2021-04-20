@@ -4,6 +4,116 @@
 #include <unistd.h>
 #include "nwtable.h"
 
+//#define INT
+
+#ifdef INT
+	typedef int Iterator;
+#else
+	typedef KeySpace1* Iterator;
+#endif
+
+Iterator begin(Table* table, KeySpace1** ks1){
+	#ifdef INT
+		return 0;
+	#else
+		return *ks1;
+	#endif
+}
+
+Iterator end(Table* table, KeySpace1** ks1){
+	#ifdef INT
+		return table->csize;
+	#else
+		return *ks1 + table->csize;
+	#endif
+}
+
+Iterator next(Iterator iterator){
+	return iterator + 1;
+}
+
+InfoS* get_info(Table* table, KeySpace1** ks1, FILE* file, Iterator iterator){
+	#ifdef INT
+		fseek(file, (*ks1)[iterator].pos, SEEK_SET);
+	#else
+		fseek(file, iterator->pos, SEEK_SET);
+	#endif
+	Item item;
+	fread(&item, sizeof(Item), 1, file);
+	InfoS* infos = (InfoS*)malloc(sizeof(InfoS));
+	infos->info.x = item.info.x;
+	infos->info.y = item.info.y;
+	infos->info.len = item.info.len;
+	infos->string = (char*)malloc(item.info.len + 1);
+	fread(infos->string, sizeof(char), item.info.len, file);
+	infos->string[item.info.len] = '\0';
+	return infos;
+}
+
+void print_info(InfoS* infos){
+	if(infos){
+		printf("%d %d %s\n", infos->info.x, infos->info.y, infos->string);
+		free(infos->string);
+		free(infos);
+	}
+}
+
+void iterator_print_table(Table* table, KeySpace1** ks1, FILE* file){
+	InfoS* infos;
+
+	for(Iterator i = begin(table, ks1); i < end(table, ks1); i = next(i)){
+		infos = get_info(table, ks1, file, i);
+		print_info(infos);
+	}
+}
+
+/*
+InfoS* read_infos(Item item, FILE* file){
+	InfoS* infos = (InfoS*)malloc(sizeof(InfoS));
+	infos->info.x = item.info.x;
+	infos->info.y = item.info.y;
+	infos->info.len = item.info.len;
+	infos->string = (char*)malloc(item.info.len + 1);
+	fread(infos->string, sizeof(char), item.info.len, file);
+	infos->string[item.info.len] = '\0';
+	return infos;
+}
+
+Item read_item1(FILE* file, KeySpace1** ks1, int ind1){
+	Item item;
+	rewind(file);
+	fseek(file, (*ks1)[ind1].pos, SEEK_CUR);
+	fread(&item, sizeof(Item), 1, file);
+	return item;
+}
+
+InfoS* KS1_1_search_wtable(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file, char key1[N], int key2){ //bin search  and delete
+
+	if(!table->csize){
+		return NULL;
+	}
+
+	int ind1, ind2;
+
+	ind1 = bin_search(table, ks1, key1);
+
+	if(ind1 == -1){
+		return NULL;
+	}
+
+	for(;ind1 < table->csize && !strcmp((*ks1)[ind1].key, key1); ind1++){
+		Item item = read_item1(file, ks1, ind1);
+		ind2 = item.ind2;
+		if((*ks2)[ind2].key == key2){
+			InfoS* infos = read_infos(item, file);
+			return infos;
+		}
+	}
+
+	return NULL;
+}
+*/
+
 unsigned int hash1(int key){ //HashFAQ6
 	char* str = (char*)&key;
 
@@ -232,7 +342,7 @@ InfoSR* read_infosr(Table* table, KeySpace1** ks1, int ind1, int ind0, char key1
 	information[ind1 - ind0].string = NULL;
 	information[ind1 - ind0].info.len = count+1;
 	ind1++;
-	for(;/*ind1 < table->csize && !strcmp((*ks1)[ind1].key, key1)*/ind1 - ind0 < count + 1; ind1++){
+	for(;ind1 - ind0 < count + 1; ind1++){
 		Item item = read_item1(file, ks1, ind1-1);
 		information[ind1 - ind0].info.x = item.info.x;
 		information[ind1 - ind0].info.y = item.info.y;
@@ -407,6 +517,30 @@ InfoSR* KS1_2_search_wtable(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE
 	return information;
 }
 
+InfoS* search_iterator_table(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file, char key1[N]){
+	static int iterartor = -1;
+	if(!table->csize){
+		return NULL;
+	}
+
+	int ind1, ind2, ind0;
+	ind1 = bin_search(table, ks1, key1);
+	if(ind1 == -1){
+		return NULL;
+	}
+
+	ind0 = ind1;
+	int count = 0;
+	for(;ind1 < table->csize && !strcmp((*ks1)[ind1].key, key1); ind1++){
+		count+=1;
+	}
+	iterartor++;
+	Item item = read_item1(file, ks1, ind0 + iterartor % count);
+	InfoS* infos = read_infos(item, file);
+	return infos;
+
+}
+
 void KS1_2_delete_wtable(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file, char key1[N]){ //bin search  and delete
 
 	if(!table->csize){
@@ -571,8 +705,6 @@ void garbage_collector_wtable(Table* table, KeySpace1** ks1, KeySpace2** ks2, FI
 	Item item;
 	while(position < end){
 		memcpy(&item, payload + position - start, sizeof(Item));
-		
-		//printf("1 %s %d\n", ks1[item.ind1].key,ks2[item.ind2].key );
 		if(!item.del){
 			(*ks1)[item.ind1].pos = position;
 			(*ks2)[item.ind2].pos = position;

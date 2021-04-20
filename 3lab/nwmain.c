@@ -85,13 +85,13 @@ int D_Find(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file){
 	char* key1;
 	int* check;
 	int key2;
-	int status, rel;	
-	static int iterator = 0;
+	int status, rel;
 	
 	printf("1.Use two keys\n");
 	printf("2.Use one key\n");
 	printf("3.Use first key and key's release\n");
 	status = read_answer(3);
+	if(!status) return -1;
 	if(status == 1){
 		printf("1.Use binary search\n");
 		printf("2.Use hash search\n");
@@ -145,6 +145,7 @@ int D_Find(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file){
 		printf("1.Use first keys\n");
 		printf("2.Use second key\n");
 		status = read_answer(2);
+		if(!status) return -1;
 		if(status == 1){
 			key1 = read_str("key1");
 
@@ -159,14 +160,13 @@ int D_Find(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file){
 			InfoSR* infosr = KS1_2_search_wtable(table, ks1, ks2, file, key1_1);
 			if(infosr){
 				//printf("%d\n", infosr[0].info.len);
-				int ind = 1 + iterator % (infosr[0].info.len - 1);
-				printf("%d %d %d %s\n", infosr[ind].release, infosr[ind].info.x, infosr[ind].info.y, infosr[ind].string);
+				//int ind = 1 + iterator % (infosr[0].info.len - 1);
+				//printf("%d %d %d %s\n", infosr[ind].release, infosr[ind].info.x, infosr[ind].info.y, infosr[ind].string);
 				for(int i = 1;i < infosr[0].info.len; i++){
-					//printf("%d %d %d %s\n", infosr[i].release, infosr[i].info.x, infosr[i].info.y, infosr[i].string);
+					printf("%d %d %d %s\n", infosr[i].release, infosr[i].info.x, infosr[i].info.y, infosr[i].string);
 					free(infosr[i].string);
 				}
 				//printf("%d\n", iterator);
-				iterator++;
 				free(infosr);
 			}
 			else{
@@ -241,6 +241,7 @@ int D_Delete(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file){
 	printf("2.Use one key\n");
 	printf("3.Use first key and key's release\n");
 	status = read_answer(3);
+	if(!status) return -1;
 	if(status == 1){
 		printf("1.Use binary search\n");
 		printf("2.Use hash search\n");
@@ -277,6 +278,7 @@ int D_Delete(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file){
 		printf("1.Use first keys\n");
 		printf("2.Use second key\n");
 		status = read_answer(2);
+		if(!status) return -1;
 		if(status == 1){
 			key1 = read_str("key1");
 
@@ -349,9 +351,8 @@ int D_GarbageCollector(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* fil
 	return 0;
 }
 
-int D_Game(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file){
-	rewind(file);
-	game();
+int D_Iterator(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file){
+	iterator_print_table(table, ks1, file);
 	return 0;
 }
 
@@ -365,7 +366,7 @@ int dialogue(){
 	printf("5.Show table\n");
 	printf("6.Remove table\n");
 	printf("7.Garbage Collector\n");
-	printf("8.Play game\033[0m\n");
+	printf("8.iterator\033[0m\n");
 	printf("(Ctrl+D if you want to exit)\n\n");
 	return read_answer(9);
 }
@@ -408,7 +409,7 @@ int main(int argc, char const *argv[])
 	int done;
 	//int iterator = 0;
 
-	int (*funcs[9])(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file) = {NULL, &D_Create, &D_Insert, &D_Find, &D_Delete, &D_Show, &D_Clear, &D_GarbageCollector, &D_Game};
+	int (*funcs[9])(Table* table, KeySpace1** ks1, KeySpace2** ks2, FILE* file) = {NULL, &D_Create, &D_Insert, &D_Find, &D_Delete, &D_Show, &D_Clear, &D_GarbageCollector, &D_Iterator};
 
 	while(answ = dialogue()){
 

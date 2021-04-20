@@ -39,49 +39,36 @@ typedef struct {
 	int csize;
 }Table;
 
-Table* create_table(int msize);
+void iterator_print_table(Table* table);
 
+Table* create_table(int msize);
 int insert_table(Table* table,const char* key1, int key2, Info info);
 
 //2 keys
 
 const Info* KS1_1_search_table(Table* table, char* key1, int key2);
-
 Info* KS1_1_copy_search_table(Table* table, char* key1, int key2);
-
 void KS1_1_delete_table(Table* table, char* key1, int key2);
-
 const Info* KS2_1_search_table(Table* table, char* key1, int key2);
-
 Info* KS2_1_copy_search_table(Table* table, char* key1, int key2);
-
 void KS2_1_delete_table(Table* table, char* key1, int key2);
 
 //1 key
 
 InfoR* KS1_2_search_table(Table* table, char* key1);
-
 InfoR* KS1_2_copy_search_table(Table* table, char* key1);
-
 void KS1_2_delete_table(Table* table, char* key1);
-
 const Info* KS2_2_search_table(Table* table, int key2);
-
 Info* KS2_2_copy_search_table(Table* table, int key2);
-
 void KS2_2_delete_table(Table* table, int key2);
 
-
-
 const Info* search_releases_table(Table* table, char* key1, int rel);
-
 Info* copy_search_releases_table(Table* table, char* key1, int rel);
-
 void delete_releases_table(Table* table, char* key1, int rel);
-
 void show_table(Table* table);
-
 void clear_table(Table* table);
+
+
 
 #endif //TABLE_H
 
