@@ -41,11 +41,6 @@ Node* create_node(Node* par, char key[N], char* string){
 	node->list.tail = NULL;
 	list_append(&node->list, (void*)string, strlen(string) + 1);
 
-	node->next = next_node(node);
-	if(node->next) node->next->prev = node;
-	node->prev = prev_node(node);
-	if(node->prev) node->prev->next = node;
-
 	return node;
 }
 
@@ -59,7 +54,7 @@ void direct_node(Node* node){
 void insert_tree(Node** root, char key[N], char* string){
 	if(!*root){
 		*root = create_node(NULL, key, string);
-		//direct_node(*root);
+		direct_node(*root);
 		return;
 	}
 	Node* node = *root;
@@ -71,7 +66,7 @@ void insert_tree(Node** root, char key[N], char* string){
 				node = node->right;
 			}else{
 				node->right = create_node(node, key, string);
-				//direct_node(node->right);
+				direct_node(node->right);
 				return;
 			}
 		}else if(status < 0){
@@ -79,7 +74,7 @@ void insert_tree(Node** root, char key[N], char* string){
 				node = node->left;
 			}else{
 				node->left = create_node(node, key, string);
-				//direct_node(node->left);
+				direct_node(node->left);
 				return;
 			}
 		}else{
@@ -122,13 +117,13 @@ char** find_tree(Node* root, char key[N]){
 	return list_return_vector_with_strings(&find->list);
 }
 
-void remove_node(Node** element, int freed){
+void remove_node(Node** element, Node* target){
 	Node* node = *element;
-	if(!freed){
+	if(!target){
 		void* tmp = list_return(&node->list, 0);
 		free(tmp);
 	}
-	if(node->list.head && !freed){
+	if(node->list.head && !target){
 		return;
 	}
 	if(node->left && node->right){
@@ -136,7 +131,11 @@ void remove_node(Node** element, int freed){
 		strcpy(node->key, max->key);
 		node->list.head = max->list.head;
 		node->list.tail = max->list.tail;
-		remove_node(&max, 1);
+
+		if(node->prev) node->prev->next = node->next;
+		if(node->next) node->next->prev = node->prev;
+
+		remove_node(&max, node);
 		return;
 	}else if(node->left){
 		if(!node->par){
@@ -169,17 +168,22 @@ void remove_node(Node** element, int freed){
 			node->par->right = NULL;
 		}
 	}
-	if(!freed) list_clear(&node->list);
-	if(node->prev) node->prev->next = node->next;
-	if(node->next) node->next->prev = node->prev;
+	if(!target) list_clear(&node->list);
+	if(target){
+		if(node->prev) node->prev->next = target;
+		if(node->next) node->next->prev = target;
+	}else{
+		if(node->prev) node->prev->next = node->next;
+		if(node->next) node->next->prev = node->prev;
+	}
 	free(node);
 }
 
 void remove_tree(Node** root, char key[N]){
 	Node* node = find_node(*root, key);
 	if(!node) return;
-	if(node == *root) remove_node(root, 0);
-	else remove_node(&node, 0);
+	if(node == *root) remove_node(root, NULL);
+	else remove_node(&node, NULL);
 }
 
 void clear_node(Node* node){

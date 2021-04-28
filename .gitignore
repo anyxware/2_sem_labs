@@ -1,1 +1,34 @@
 *.exe
+2lab/.task.c
+	3lab/BUF_Makefile
+	3lab/C_Makefile
+	3lab/Makefile
+	3lab/NWMakefile
+	3lab/buf_main.c
+	3lab/c_table
+	3lab/c_table.bin
+	3lab/lab6.c
+	3lab/list.c
+	3lab/list.h
+	3lab/main
+	3lab/old/
+	3lab/table.bin
+	4lab/B_Makefile
+	4lab/Makefile
+	4lab/b_tree.bin
+	4lab/bench
+	4lab/bench.c
+	4lab/finder
+	4lab/freq_tree_b.c
+	4lab/list.c
+	4lab/list.h
+	4lab/main
+	4lab/ntree.bin
+	4lab/ntree.dot
+	4lab/ntree.png
+	4lab/old/
+	4lab/oldfinder.c
+	4lab/structure
+	4lab/task.c
+	4lab/task.h
+	4lab/test.txt

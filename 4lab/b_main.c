@@ -3,8 +3,9 @@
 #include <stdlib.h>
 #include "b_tree.h"
 #include "task.h"
+//#define alfa 0.5
 
-int D_Insert(Node** root, int* max_size){
+int D_Insert(Tree* tree){
 	Info info;
 	int* check;
 	char* key1;
@@ -48,25 +49,23 @@ int D_Insert(Node** root, int* max_size){
 		return -1;
 	}
 
-	const Info* read_info = insert_tree(root, max_size, key1_1, info);
-	if(read_info){
-		printf("%d %d %s\n", read_info->x, read_info->y, read_info->string);
+	Info read_info = insert_tree(tree, key1_1, info);
+	if(read_info.string){
+		printf("%d %d %s\n", read_info.x, read_info.y, read_info.string);
+		free(read_info.string);
 	}
 
-	/*
-	RetInfo retinfo = insert_tree(root, key1_1, info);
-	if(retinfo.info){
-		printf("%d %d %s\n", retinfo.info->x, retinfo.info->y, retinfo.info->string);
-	}else{
-		printf("height: %d\n", retinfo.height);
-	}
-	*/
 	free(info.string);
 	free(key1);
 	return 0;
 }
 
-int D_Find(Node** root, int* max_size){
+int D_Find(Tree* tree){
+	if(!tree->root){
+		printf("\033[1;31mNo table\033[0m\n");
+		return 0;
+	}
+
 	char* key1;
 	int status;
 	
@@ -86,7 +85,7 @@ int D_Find(Node** root, int* max_size){
 			key1_1[i] = key1[i];
 		}
 
-		const Info* info = find_tree(*root, key1_1);
+		const Info* info = find_tree(tree, key1_1);
 		if(info){
 			printf("%d %d %s\n", info->x, info->y, info->string);
 		}
@@ -94,12 +93,12 @@ int D_Find(Node** root, int* max_size){
 		free(key1);
 
 	}else if(status == 2){
-		const Info* info = find_max_tree(*root);
+		const Info* info = find_max_tree(tree->root);
 		if(info){
 			printf("%d %d %s\n", info->x, info->y, info->string);
 		}
 	}else{
-		const Info* info = find_max_tree(*root);
+		const Info* info = find_max_tree(tree->root);
 		if(info){
 			printf("%d %d %s\n", info->x, info->y, info->string);
 		}
@@ -108,8 +107,8 @@ int D_Find(Node** root, int* max_size){
 	return 0;
 }
 
-int D_Delete(Node** root, int* max_size){
-	if(!*root){
+int D_Delete(Tree* tree){
+	if(!tree->root){
 		printf("\033[1;31mNo table\033[0m\n");
 		return 0;
 	}
@@ -128,14 +127,14 @@ int D_Delete(Node** root, int* max_size){
 		key1_1[i] = key1[i];
 	}
 
-	remove_tree(root, max_size, key1_1);
+	remove_tree(tree, key1_1);
 
 	free(key1);
 	return 0;
 }
 
-int D_Show(Node** root, int* max_size){
-	if(!*root){
+int D_Show(Tree* tree){
+	if(!tree->root){
 		printf("\033[1;31mNo table\033[0m\n");
 		return 0;
 	}
@@ -146,32 +145,32 @@ int D_Show(Node** root, int* max_size){
 	if(!status){
 		return -1;
 	}else if(status == 1){
-		print_tree(*root);
+		print_tree(tree->root);
 	}else if(status == 2){
-		format_print_tree(*root);
+		format_print_tree(tree->root);
 	}else if(status == 3){
-		dot_print_tree(*root);
+		dot_print_tree(tree->root);
 		system("dot ntree.dot | neato -n -Tpng -o ntree.png; gimp ntree.png");
 	}
 	return 0;
 }
 
-int D_Clear(Node** root, int* max_size){
-	if(!*root){
+int D_Clear(Tree* tree){
+	if(!tree->root){
 		printf("\033[1;31mNo table\033[0m\n");
 		return 0;
 	}
 
-	clear_tree(root);
+	clear_tree(tree);
 	return 0;
 }
 
-int D_Write(Node** root, int* max_size){
-	write_tree(*root);
+int D_Write(Tree* tree){
+	write_tree(*tree);
 }
 
-void deleteTree(Node** root){
-	if(*root) clear_tree(root);
+void deleteTree(Tree* tree){
+	if(tree->root) clear_tree(tree);
 }
 
 int dialogue(){
@@ -190,48 +189,52 @@ int dialogue(){
 
 int main(int argc, char const *argv[])
 {
-	Node* root = NULL;
-	int max_size = 0;
+	system("clear");
 
+	Tree tree = {0};
 	
+	/*
 	Info info = {1,2,"qwe"};
-	insert_tree(&root, &max_size, "1", info);
-    insert_tree(&root,&max_size, "2", info);
-    insert_tree(&root,&max_size, "8", info);
-    insert_tree(&root,&max_size, "9", info);
-    insert_tree(&root,&max_size, "7", info);
-    insert_tree(&root,&max_size, "3", info);
-    insert_tree(&root,&max_size ,"4", info);
-    
+	insert_tree(&tree, "1", info);
+    insert_tree(&tree, "2", info);
+    insert_tree(&tree, "8", info);
+    insert_tree(&tree, "9", info);
+    insert_tree(&tree, "7", info);
+    insert_tree(&tree, "3", info);
+    insert_tree(&tree,"4", info);
+   */
 
 	printf("Read tree from file(Y/n\\{\\n})?\n");
 	char* answer = read_str("answer");
+	
 	if(!answer) return 0;
-	else if(answer[0] != 'n') read_tree(&root, &max_size);
+	else if(answer[0] != 'n') read_tree(&tree);
+	else tree.alfa = 0.5;
+
 	free(answer);
 	
 	int answ;
 	int done;
 
-	int (*funcs[7])(Node** root, int* max_size) = {NULL, &D_Insert, &D_Find, &D_Delete, &D_Show, &D_Clear, &D_Write};
+	int (*funcs[7])(Tree* tree) = {NULL, &D_Insert, &D_Find, &D_Delete, &D_Show, &D_Clear, &D_Write};
 
 	while(answ = dialogue()){
 		if(funcs[answ]){
-			done = funcs[answ](&root, &max_size);//funcs[answ](&table);
+			done = funcs[answ](&tree);//funcs[answ](&table);
 			if(done < 0)
 				break;
+			/*
+			for(int j = 0; j < BUF_SIZE; j++){
+				if(tree.bufer.array[j].busy == 1){
+					printf("%s  -  ", tree.bufer.array[j].node->key);
+				}else printf("0  -  ");
+			}
+			printf("\n");
+			*/
 		}
 	}
-	/*
 
-	Node* node = find_node(root, "8");
-	Node* head = tree_to_list(node);
-	while(head){
-		printf("%s\n", head->key);
-		head = head->right;
-	}
-	*/
-
-	deleteTree(&root);
+	//free(tree.bufer);
+	deleteTree(&tree);
 	return 0;
 }
