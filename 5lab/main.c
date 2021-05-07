@@ -379,7 +379,7 @@ int main(int argc, char const *argv[])
 
 	while(answ = dialogue()){
 		if(funcs[answ]){
-			done = funcs[answ](&graph);//funcs[answ](&table);
+			done = funcs[answ](&graph);
 			if(done < 0)
 				break;
 		}

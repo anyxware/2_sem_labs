@@ -4,7 +4,7 @@
 #include <float.h>
 #include "graph.h"
 
-#define GRAPH_SIZE 1
+#define GRAPH_SIZE 5
 
 void init_graph(Graph* graph){
 	graph->msize = GRAPH_SIZE;
@@ -274,34 +274,11 @@ int find_min(Graph graph, int size, char visited[size], float distance[size]){
 	int index = -1;
 	float min = FLT_MAX;
 	for(int i = 0; i < size; i++){
-		if(!visited[i] && distance[i] < min /*&& graph.array[i].busy == 1*/){
+		if(!visited[i] && distance[i] < min && graph.array[i].busy == 1){
 			min = distance[i];
 			index = i;
 		}
 	}
-	return index;
-}
-
-int pop_priority_queue(QItem** queue, int size, char visited[size], float distance[size], Graph graph){
-	QItem* ptr, *prev;
-	int index = -1;
-	float min = FLT_MAX;
-	QItem* cur_ptr, *cur_prev;
-	for(ptr = *queue, prev = NULL; ptr; prev = ptr, ptr = ptr->next){
-		if(!visited[ptr->index] && distance[ptr->index] <= min /*&& graph.array[i].busy == 1*/){
-			min = distance[ptr->index];
-			index = ptr->index;
-			cur_prev = prev;
-			cur_ptr = ptr;
-		}
-	}
-	ptr = cur_ptr;
-	prev = cur_prev;
-	//for(ptr = *queue, prev = NULL; ptr && ptr->index != index; prev = ptr, ptr = ptr->next){}
-	if(!ptr) return -1;
-	if(ptr == *queue) *queue = ptr->next;
-	if(prev) prev->next = ptr->next;
-	free(ptr);
 	return index;
 }
 
@@ -343,17 +320,14 @@ Route Deikstra(Graph graph, Coords coords1, Coords coords2){
 	for(int i = 0; i < graph.msize && graph.array[i].busy; i++){
 		if(graph.array[i].busy == 1){
 			count++;
-			//push_queue(&queue, i);
 		}
 	}
 
 	for(int i = 0; i < count; i++){
-		//while(queue){
 		int cur_index = find_min(graph, size, visited, distance);
 		if(cur_index == -1){
 			break;
 		}
-		//int cur_index = pop_priority_queue(&queue, size, visited, distance, graph);
 		visited[cur_index] = 1;
 		for(Item* ptr = graph.array[cur_index].head; ptr; ptr = ptr->next){
 			if(distance[ptr->index] > distance[cur_index] + ptr->weight){
@@ -458,8 +432,7 @@ Graph Ford_Fulk(Graph graph, Coords coords1, Coords coords2){
 	char visited[size];
 	memset(visited, 0, size * sizeof(char));
 	
-	//FF Net[size][size];
-	//memset(Net, 0, size * size * sizeof(FF));
+	
 	FF** Net = (FF**)malloc(size * sizeof(FF*));
 	for(int i = 0; i < size; i++){
 		Net[i] = (FF*)calloc(size, sizeof(FF));
@@ -494,18 +467,7 @@ Graph Ford_Fulk(Graph graph, Coords coords1, Coords coords2){
 		delete_queue(&path);
 	}
 	visited[index2] = 1;
-	
-	/*/////
-	for(int i = 0; i < size; i++){
-		for(int j = 0; j < size; j++){
-			printf("%.0f/%.0f ", Net[i][j].flow, Net[i][j].cap);
-		}
-		printf("\n");
-	}
-	printf("\n");
-	*//////
 
-	//float newNet[size][size];
 	//newNet initializing
 	float** newNet = (float**)malloc(size * sizeof(float*));
 	for(int i = 0; i < size; i++){
@@ -527,18 +489,7 @@ Graph Ford_Fulk(Graph graph, Coords coords1, Coords coords2){
 			newNet[j][i] += Net[i][j].flow;
 			newNet[i][j] += Net[i][j].cap - 2 * Net[i][j].flow;
 		}
-	}
-	//
-
-	/*
-	for(int i = 0; i < size; i++){
-		for(int j = 0; j < size; j++){
-			printf("%.0f ", newNet[i][j]);
-		}
-		printf("\n");
-	}
-	*/
-	
+	}	
 
 	Graph new_graph;
 	//creating a Net
@@ -595,9 +546,7 @@ void write_to_file(Graph graph, FILE* file){
 
 void read_from_file(Graph* graph, FILE* file){
 	char status;
-	/**/int j = 0;
 	for(;;){
-		///**/printf("%d\n", j++);
 		fread(&status, sizeof(char), 1, file);
 		if(status == 0){
 			Coords coords;
@@ -609,7 +558,6 @@ void read_from_file(Graph* graph, FILE* file){
 		}
 	}
 	for(int i = 0; i < graph->msize && graph->array[i].busy; i++){
-		///**/printf("%d\n", i);
 		for(;;){
 			fread(&status, sizeof(char), 1, file);
 			if(status == 0){
