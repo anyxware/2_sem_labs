@@ -383,7 +383,7 @@ void left_rotate(Node** root, Node* node){
 
 	node->right = right_node->left;
 
-	if(right_node->left != NULL)
+	if(right_node->left)
 		right_node->left->par = node;
 	
 	right_node->par = parent;
@@ -405,7 +405,7 @@ void right_rotate(Node** root, Node* node){
 
 	node->left = left_node->right;
 
-	if(left_node->right != NULL)
+	if(left_node->right)
 		left_node->right->par = node;
 	
 	left_node->par = parent;
