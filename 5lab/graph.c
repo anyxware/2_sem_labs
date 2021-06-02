@@ -302,7 +302,6 @@ Route Deikstra(Graph graph, Coords coords1, Coords coords2){
 		return route;
 	}
 
-
 	int size = graph_size(graph);
 	char visited[size];
 	memset(visited, 0, size * sizeof(char));
@@ -535,8 +534,8 @@ void write_to_file(Graph graph, FILE* file){
 		if(graph.array[i].busy == 1){
 			for(Item* ptr = graph.array[i].head; ptr; ptr = ptr->next){
 				fwrite(&cont, sizeof(char), 1, file);
-				fwrite(&graph.array[ptr->index].coords.x, sizeof(int), 1, file);
-				fwrite(&graph.array[ptr->index].coords.y, sizeof(int), 1, file);
+				fwrite(&graph.array[ptr->index].coords.x, sizeof(float), 1, file);
+				fwrite(&graph.array[ptr->index].coords.y, sizeof(float), 1, file);
 				fwrite(&ptr->weight, sizeof(float), 1, file);
 			}
 			fwrite(&end, sizeof(char), 1, file);
@@ -599,7 +598,7 @@ void show(Graph graph){
 	}
 }
 
-void dot_show(Graph graph){
+void dot_show1(Graph graph){
 	FILE* file = fopen("graph.dot", "w");
 	fprintf(file, "digraph G {graph [ dpi = 150 ];nodesep=0.3;ranksep=0.2;margin=0.1;node [shape=circle];edge [arrowsize=0.8];\n");
 	for(int i = 0; i < graph.msize && graph.array[i].busy; i++){
@@ -614,7 +613,7 @@ void dot_show(Graph graph){
 	fclose(file);
 }
 
-void dot_show1(Graph graph){
+void dot_show(Graph graph){
 	FILE* file = fopen("graph.dot", "w");
 	fprintf(file, "digraph G {graph [ dpi = 150 ];nodesep=0.3;ranksep=0.2;margin=0.1;node [shape=circle];edge [arrowsize=0.8];\n");
 	for(int i = 0; i < graph.msize && graph.array[i].busy; i++){
